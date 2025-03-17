@@ -1,0 +1,29 @@
+---
+title: "intro_tab"
+output: 
+  html_document:
+    css: "www/css/report_styles.css"
+---
+
+<center>
+
+# Welcome to the BAM National Model Explorer Shiny app
+
+</center>
+
+BAM National Model Explorer app allow to explore and download BAM National Model density map. Each component includes two or more modules, which are possible analyses for that step.  
+
+**Components:**  
+
+**1.** *Visualize species specific density map*  
+- Select the species
+- Select / upload the extent
+- Select the band
+- Download the data
+
+**2.** *Analyse*  
+- blabla
+- blabla
+- blabla
+- blabla
+- blabla

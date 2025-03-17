@@ -1,0 +1,33 @@
+---
+title: "data"
+output: html_document
+---
+
+## Placeholder for visualization tab 
+
+## Introduction
+
+
+## Description
+
+
+## Using the app
+
+Using the app consists of three simple steps:
+
+1. Select a species
+2. Select  the extent
+3. Download
+
+
+### 1. Select  a species
+
+
+### 2. Select  the extent
+
+
+
+### 3. Download
+
+
+
