@@ -14,7 +14,8 @@ exploreUI <- function(id, opt) {
     selectizeInput(ns("sppSelect"), "Select a species:",
                   choices = NULL,  multiple = TRUE,
                   options = list(placeholder = "Start typing to search...",
-                                 maxOptions = 10, closeOnSelect = FALSE)),
+                                 maxItems = 12,
+                                 maxOptions = 999, closeOnSelect = FALSE)),
    div(style = "color: white !important; margin: 15px; margin-top: 10px; font-size:13px;font-weight: bold", "  --  Or  --"),
    selectInput(ns("sppGroup"), label = div(style = "font-size:13px;margin-top: -10px;", "Select a group of species"), choices = c("Please select", spp.grp), selected = "Please select"),
    div(style = "color: white !important; margin-top: 50px; font-size:13px;", "Select the data extent"),
@@ -223,7 +224,7 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
       clearGroup("BCR") %>%
       clearGroup("highlighted") %>%
       removeControl("legend_custom") %>%
-      add_species_layers(., sppMap_layer) %>%
+      add_species_layers(., sppMap_layer, input$sppDisplay) %>%
       addPolygons(data=bcr_map, color='black', fillColor = "white", fillOpacity = 0.05, weight=2, layerId = bcr_map$subunit_ui, popup = ~subunit_ui, group="BCR", options = leafletOptions(pane = "overlay"))
 
     removeModal()
@@ -236,8 +237,9 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     # Add species checkbox to UI
     output$speciesboxes <- renderUI({
       req(sppMap)  # Ensure it's not NULL
-      
-      checkbox_list <- lapply(spp_listsub, function(name) {
+
+      checkbox_list <- lapply(input$sppSelect, function(name) {
+      #checkbox_list <- lapply(spp_listsub, function(name) {
         checkboxInput(inputId = ns(name), label = name, value = FALSE)  # Default unchecked
       })
       
@@ -262,13 +264,12 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
                            5)   
     # Extract the selected layer for each species map
     sppMap_layer <- lapply(reactiveVals$sppSelectCache(), function(x) x[[band_index]])
-    
     # Update the map
     myMapProxy %>%
       clearImages() %>%
       clearControls() %>%
       clearGroup("Species Data") %>%  # Clear the previous band layer
-      add_species_layers(., sppMap_layer)  # Add the new selected band layer
+      add_species_layers(., sppMap_layer, input$sppDisplay)  # Add the new selected band layer
   })
   
   
