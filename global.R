@@ -19,8 +19,10 @@ invisible(lapply(required_packages, library, character.only = TRUE))
 # data component related
 bcrv4.map <- vect('www/data/4326/BAM_BCRNMv4_4326.shp')
 bcrv5.map <- vect('www/data/4326/BAM_BCRNMv5_4326.shp')
+BCRNMv4 <- vect('www/data/5072/BAM_BCRNMv4_5072.shp')
+BCRNMv5 <- vect('www/data/5072/BAM_BCRNMv4_5072.shp')
 load("www/data/sysdata.rda")
-load("www/data/BCRNM.RData")
+#load("www/data/BCRNM.RData")
 
 spp.grp <- c("COSEWIC","Cavity_Birds", "Waterfowl", "Marine_Birds","Shorebirds", "Wetland_Birds", "Birds_of_Prey",
              "Forest_Birds", "Grassland_Birds", "Aerial_Insectivores", "Arctic_Birds", "Long_Distance_Migrants")

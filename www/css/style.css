@@ -144,107 +144,15 @@ label {
   margin-top: 0px !important;
   margin-bottom: 0px !important;
 }
-/*
-.navbar-header {
-  width: 25% ;
-  display: flex;
-  align-items: center;
-}
-.navbar-logo {
-  margin-top:-10px;
-  max-width: 100%;
-  max-height: 100%;
-  margin-right: 10px;
-  padding-right:10px;
-  padding-bottom:10px",
+
+.dynamic-checkbox-label {
+  color: white !important;
+  opacity: 1 !important;
+  font-weight: normal !important;
 }
 
-
-.shiny-progress .bar {
-  background-color:#FF0000;
-  opacity:0.8;
+.shiny-input-checkbox label {
+  color: white !important;
+  opacity: 1 !important;
+  font-weight: normal !important;
 }
-.shiny-progress .progress {
-  height:7px;
-}
-.rpkg {
-  font-size:10pt;
-  font-weight:bold;
-}
-.mod {
-  display:inline;
-  color:#699FA1;
-  font-size:14pt;
-  font-weight:bold;
-}
-.modHelpButton {
-  color:#699FA1;
-  margin:0px;
-  font-size:12pt;
-}
-.modHelpButton:hover {
-  color:#A5D6D9;
-}
-.modHelpButton:focus {
-  color:#699FA1;
-}
-.pkgTitl {
-  font-size:10pt;
-  font-weight:bold;
-  font-style:italic;
-}
-.pkgDes {
-  font-size:10pt;
-  font-style:italic;
-}
-.step {
-  color: #DD8627;
-  font-weight:bold;
-  font-size:14pt;
-}
-.stepText {
-  font-style:italic;
-  font-size:14pt;
-}
-.butReset {
-  background-color: #C51E10;
-  color: white;
-  padding: 5px 5px;
-  border: none;
-}
-.butReset:hover {
-  background-color: #830D03;
-  color: white;
-}
-.butResXf {
-  background-color: #C51E10;
-  color: white;
-  padding: 1px 1px;
-  border: none;
-}
-.hrDashed {
-  border: 0;
-  border-bottom: 1px dashed #606060;
-  background: transparent;
-}
-.hrDotted {
-  border: 0;
-  border-bottom: 1px dotted #606060;
-  background: transparent;
-}
-
-.leaflet-top {
-  z-index: 999 !important;
-}
-#save_warning {
-  color: red;
-}
-.save_icon {
-  color:#606060;
-  margin:0px;
-}
-.mod_icon {
-  color:#699FA1;
-  margin:0px;
-}
-*/

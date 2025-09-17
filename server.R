@@ -1,6 +1,13 @@
 # Define server logic
 server <- function(input, output, session) {
 
+  ################################################################################################
+  # RELOAD
+  observeEvent(input$reload_btn, {
+    session$reload()
+  })
+  ################################################################################################
+  
   layers <- callModule(reactiveLayersModule, id = "reactiveLayersModule")
 
   # tab and module-level reactives
@@ -15,16 +22,9 @@ server <- function(input, output, session) {
     mapCache = reactiveVal(0),
     sppListCache = reactiveVal(NULL),
     sppSelectCache = reactiveVal(NULL),
-    bcrCache = reactiveVal(NULL)
+    bcrCache = reactiveVal(NULL),
+    inserted_ids = reactiveVal(character())
   )
-  
-  #insertedTabs <- reactiveVal(c())
-  #subunit_names <- reactiveVal(NULL)
-  #selected_subunits <- reactiveValues(selected = character())
-  #sppMapCache <- reactiveVal(0)
-  #sppListCache <- reactiveVal(NULL)
-  #sppSelectCache <- reactiveVal(NULL)
-  #bcrCache <- reactiveVal(NULL)
   
   ######################## #
   ### GUIDANCE TEXT ####
@@ -49,6 +49,7 @@ server <- function(input, output, session) {
   # Initialize map
   # Initialize Leaflet map centered on Canada
   output$myMap <- renderLeaflet({
+    
     leaflet() %>%
       addMapPane(name = "ground", zIndex=380) %>%
       addMapPane(name = "overlay", zIndex=420) %>%

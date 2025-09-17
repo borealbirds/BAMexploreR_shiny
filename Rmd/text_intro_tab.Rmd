@@ -1,8 +1,7 @@
 ---
 title: "intro_tab"
-output: 
-  html_document:
-    css: "www/css/report_styles.css"
+output: html_document
+
 ---
 
 <center>
@@ -15,13 +14,16 @@ BAM National Model Explorer app allow to explore and download BAM National Model
 
 **Components:**  
 
-**1.** *Visualize species specific density map*  
+**1.** *Explore the data*
+
+Visualize species specific density map 
+
 - Select the species
 - Select / upload the extent
-- Select the band
+- Select the layer
 - Download the data
 
-**2.** *Analyse*  
+**2.** *Population distribution*  
 - blabla
 - blabla
 - blabla

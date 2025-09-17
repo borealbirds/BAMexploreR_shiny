@@ -27,19 +27,64 @@ exploreUI <- function(id, opt) {
 
 bandUI  <- function(id) {
   ns <- NS(id)
-  div(style = "margin-top: 40px;", hidden(selectInput(ns("band"), label = "Select band:", 
-              choices = c("Mean", "CV", "Mean extrapolation", 
-                          "Km to nearest point count", "Not sure"), 
-              selected = "Mean"
+  div(style = "margin-top: 40px;", hidden(selectInput(ns("band"), label = "Select band *:", 
+              choices = c("mean", "coefficient of variation"), 
+              selected = "mean"
   )))
 }
 
-dwdUI  <- function(id) {
-  ns <- NS(id)
-  tags$style(type="text/css", "#downloadData {background-color:white;color: black}")
-  div(style = "margin-top: 40px;", hidden(downloadButton(ns("dwdNMoutput"), "Download species map")))
-}
+#dwdUI  <- function(id) {
+#  ns <- NS(id)
+#  tags$style(type="text/css", "#downloadData {background-color:white;color: black}")
+#  div(style = "margin-top: 40px;", hidden(downloadButton(ns("dwdNMoutput"), "Download species map")),
+#      tags$div(
+#        style = "font-size: 0.85em; color: white !important; font-weight: normal;",
+        
+        # Title in italics
+#        tags$br(),
+#        tags$br(),
+#        tags$em("* Band definition"),
+        
+        # Definitions
+#        tags$p(
+#          tags$strong("mean"),
+#          " are regions of the study area ...",
+#          tags$br(),
+#          tags$strong("coefficient of variation"),
+#          " are regions within ..."
+#        )
+#      )
+#  )
+#}
 
+dwdUI <- function(id) {
+  ns <- NS(id)
+  tagList(
+    useShinyjs(),
+    tags$style(type="text/css", "#downloadData {background-color:white;color: black}"),
+    div(style = "margin-top: 40px;",
+        hidden(downloadButton(ns("dwdNMoutput"), "Download species map")),
+        
+        # Wrap your text in an id so we can show it later
+        hidden(
+          div(
+            id = ns("bandDef"),
+            style = "font-size: 0.85em; color: white !important; font-weight: normal;",
+            tags$br(),
+            tags$br(),
+            tags$em("* Band definition"),
+            tags$p(
+              tags$strong("mean"),
+              " is mean density prediction across 32 independent model runs measured in male birds per hectare",
+              tags$br(),
+              tags$strong("coefficient of variation"),
+              " is the variation in density across model runs"
+            )
+          )
+        )
+    )
+  )
+}
 sppUI  <- function(id) {
   ns <- NS(id)
   uiOutput(ns("speciesboxes"))
@@ -59,6 +104,7 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
   sppListCache <- reactiveVals$sppListCache
   sppSelectCache <- reactiveVals$sppSelectCache
   bcrCache <- reactiveVals$bcrCache
+  inserted_ids <- reactiveVals$inserted_ids 
   
   observeEvent(input$versionSel,{
     bcr_map <- if (input$versionSel == "v5") bcrv5.map else bcrv4.map
@@ -123,18 +169,23 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
   })
   
   observe({
-    req(layers$bcr_reactive(), selected_subunits())  # Ensure both are available
-    req(mapCache() != input$getLayerNM[1])
     
-    bcr_map <- layers$bcr_reactive()
+    req(layers$bcr_reactive(), selected_subunits())  # Ensure both are available
+    #req(mapCache() != input$getLayerNM[1])
+    
+    bcr_map <- layers$bcr_reactive() 
     selected_units <- subset(bcr_map, bcr_map$subunit_ui %in% selected_subunits())
     
     if(input$mosaic){
       selected_units <- bcr_map
     }
     
+    bbox_vals <- terra::ext(bcr_map)
+    map_bounds <- c(bbox_vals$xmin, bbox_vals$ymin, bbox_vals$xmax, bbox_vals$ymax)
+    
     myMapProxy %>% 
       clearGroup("highlighted") %>%  # Clear only highlighted group
+      fitBounds(map_bounds[1], map_bounds[2], map_bounds[3], map_bounds[4]) %>%
       addPolygons(data = selected_units, fillColor = "red", fillOpacity = 0.7, weight = 2, color = "black", group = "highlighted", options = leafletOptions(pane = "overlay"))
   })
   
@@ -143,7 +194,7 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     req(spp_list)
     req(input$sppDisplay)
     
-    sppURL <- sppList(input$versionSel, input$sppDisplay)
+    sppURL <- bam_spp_list(input$versionSel, input$sppDisplay)
     sppOnline <- spp_list %>%
       filter(.data[[input$sppDisplay]] %in% sppURL)
       
@@ -171,7 +222,7 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     req(spp_list)
     req(input$sppGroup !="Please select")
     
-    sppURL <- sppList(input$versionSel, input$sppDisplay)
+    sppURL <- bam_spp_list(input$versionSel, input$sppDisplay)
     sppOnline <- spp_list %>%
       filter(.data[[input$sppDisplay]] %in% sppURL)
     
@@ -189,8 +240,17 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
   })
   
   observeEvent(input$getLayerNM,{
+    if(is.null(selected_subunits()) || is.null(input$sppSelect)){
+        # show pop-up ...
+        showModal(modalDialog(
+          title = "You must select both a species and a data extent before proceeding.",
+          easyClose = TRUE,
+          footer = modalButton("OK")))
+      }
+      
     req(layers$bcr_reactive(), selected_subunits(), input$sppSelect)  # Ensure both are available
-    bcr_map <- layers$bcr_reactive()
+  
+    bcr_map <- layers$bcr_reactive() %>% st_as_sf()
     pop = ~paste("BCR:", subunit_ui)
     
     req(mapCache() != input$getLayerNM[1])
@@ -212,19 +272,22 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     
     yearSelect <- if(input$versionSel == "v5") input$modYr else NULL
     
-    sppMap <- getlayerNM(spp_listsub, input$versionSel, destfile = tempdir(), ext= selected_subunits(), year = yearSelect, lazyload= FALSE, bcrNM=layers$bcr_reactive())
+    sppMap <- bam_get_layer(spp_listsub, input$versionSel, destfile = tempdir(), crop_ext= NULL, year = yearSelect, bcrNM=selected_subunits())
     reactiveVals$sppSelectCache(sppMap)
     sppMap_layer <- lapply(sppMap, function(x) x[[1]])
-    #bcrCache(selected_subunits())
     reactiveVals$bcrCache(selected_subunits())
     
+    bbox_vals <- terra::ext(bcr_map)
+    map_bounds <- c(bbox_vals$xmin, bbox_vals$ymin, bbox_vals$xmax, bbox_vals$ymax)
+    
     myMapProxy %>%
-      clearImages() %>%
+      #clearImages() %>%
       clearControls() %>%
       clearGroup("BCR") %>%
       clearGroup("highlighted") %>%
       removeControl("legend_custom") %>%
-      add_species_layers(., sppMap_layer, input$sppDisplay) %>%
+      fitBounds(map_bounds[1], map_bounds[2], map_bounds[3], map_bounds[4]) %>%
+      add_species_layers(., sppMap_layer, input$sppDisplay, input$versionSel, input$modYr, input$band, band_index)  %>%
       addPolygons(data=bcr_map, color='black', fillColor = "white", fillOpacity = 0.05, weight=2, layerId = bcr_map$subunit_ui, popup = ~subunit_ui, group="BCR", options = leafletOptions(pane = "overlay"))
 
     removeModal()
@@ -234,20 +297,33 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
       shinyjs::show("band")
     }
     
-    # Add species checkbox to UI
+    new_ids <- vapply(input$sppSelect, function(name) {
+      if (input$versionSel == "v5") {
+        paste(name, input$versionSel, input$modYr, sep = "_")
+      } else {
+        paste(name, input$versionSel, sep = "_")
+      }
+    }, character(1))
+    
+    # Add new_ids
+    updated_ids <- unique(c(inserted_ids(), new_ids))
+    reactiveVals$inserted_ids(updated_ids)
+    
     output$speciesboxes <- renderUI({
-      req(sppMap)  # Ensure it's not NULL
-
-      checkbox_list <- lapply(input$sppSelect, function(name) {
-      #checkbox_list <- lapply(spp_listsub, function(name) {
-        checkboxInput(inputId = ns(name), label = name, value = FALSE)  # Default unchecked
+      req(reactiveVals$inserted_ids())
+      
+      checkbox_list <- lapply(reactiveVals$inserted_ids(), function(id) {
+        checkboxInput(inputId = ns(id),
+                      label = tags$span(class = "dynamic-checkbox-label", id),
+                      value = FALSE)
       })
       
-      div(class = "checkbox-grid", do.call(tagList, checkbox_list))  # Wrap checkboxes
+      tagList(checkbox_list)
     })
-    
+   
     # Add download button to UI
     shinyjs::show("dwdNMoutput")
+    shinyjs::show("bandDef") 
   }, ignoreNULL = TRUE)
   
   # Update map when band is selected
@@ -257,11 +333,8 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     
     # Determine which layer to extract based on input$band
     band_index <- switch(input$band,
-                          "Mean" = 1,
-                          "CV" = 2,
-                          "Mean extrapolation" = 3,
-                          "Km to nearest point count" = 4,
-                           5)   
+                          "mean" = 1,
+                          2)   
     # Extract the selected layer for each species map
     sppMap_layer <- lapply(reactiveVals$sppSelectCache(), function(x) x[[band_index]])
     # Update the map
@@ -269,9 +342,31 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
       clearImages() %>%
       clearControls() %>%
       clearGroup("Species Data") %>%  # Clear the previous band layer
-      add_species_layers(., sppMap_layer, input$sppDisplay)  # Add the new selected band layer
+      add_species_layers(., sppMap_layer, input$sppDisplay, input$versionSel, input$modYr, input$band, band_index)  # Add the new selected band layer
   })
   
+  observe({
+    spp_names <- names(reactiveVals$sppSelectCache())
+    species_choices <- switch(
+      input$sppDisplay,
+      "speciesCode"   = spp_list$speciesCode,
+      "commonName"    = spp_list$commonName,
+      "scientificName"= spp_list$scientificName
+    )
+    display_names <- if (input$versionSel == "v5")
+      paste(species_choices[match(spp_names, spp_list$speciesCode)], input$versionSel, input$modYr, sep = "_")
+    else
+      paste(species_choices[match(spp_names, spp_list$speciesCode)], input$versionSel, sep = "_")
+    
+    selected <- reactiveVals$sppSelectCache()[display_names %in% names(input) & 
+                                                purrr::map_lgl(display_names, ~ input[[.x]] %||% FALSE)]
+    
+    if (length(selected) == 0) {
+      shinyjs::disable("dwdNMoutput")  # Disable button
+    } else {
+      shinyjs::enable("dwdNMoutput")   # Enable button
+    }
+  })
   
   ###########################################################
   ###########################################################
@@ -279,37 +374,49 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
   ###########################################################
   ###########################################################
   output$dwdNMoutput <- downloadHandler(
-    filename = function() { "species_tiffs.zip" },
+    filename = function() { "BAM_NM_output.zip" },
     content = function(file) {
-      # Ensure at least one species is selected
-      req(reactiveVals$sppSelectCache)
+      # Get selected species (checkboxes checked)
+      spp_names <- names(reactiveVals$sppSelectCache())
+      species_choices <- switch(
+        input$sppDisplay,
+        "speciesCode"   = spp_list$speciesCode,
+        "commonName"    = spp_list$commonName,
+        "scientificName"= spp_list$scientificName
+      )
+      display_names <- if (input$versionSel == "v5")
+        paste(species_choices[match(spp_names, spp_list$speciesCode)], input$versionSel, input$modYr, sep = "_")
+      else
+        paste(species_choices[match(spp_names, spp_list$speciesCode)], input$versionSel, sep = "_")
       
-      final_spp <- reactive({
-         
-        # Extract names from the list of SpatRast objects
-        spp_names <- names(reactiveVals$sppSelectCache())
-        
-        # Filter based on checked checkboxes
-        selected <- reactiveVals$sppSelectCache()[spp_names %in% names(input) & map_lgl(spp_names, ~ input[[.x]] %||% FALSE)]
-        
-        selected
-      })
+      selected <- reactiveVals$sppSelectCache()[display_names %in% names(input) &
+                                                  purrr::map_lgl(display_names, ~ input[[.x]] %||% FALSE)]
       
-      # Create a temporary directory
+      # ---- Proceed with download ----
       tiff_files <- c()
       
-      for (species in final_spp()) {
-        # Store the file path
-        tiff_files <- c(tiff_files, terra::sources(species))
+      for (species_code in names(selected)) {
+        raster_obj <- selected[[species_code]]
+        
+        display_names <- if (input$versionSel == "v5")
+          paste(species_code, input$versionSel, input$modYr, sep = "_")
+        else
+          paste(species_code, input$versionSel, sep = "_")
+        
+        tiff_path <- file.path(tempdir(), paste0(display_names, ".tif"))
+        writeRaster(raster_obj, tiff_path, overwrite = TRUE)
+        tiff_files <- c(tiff_files, tiff_path)
       }
       
       # Create a ZIP file
       zip_filename <- file.path(tempdir(), "BAM_NM_output.zip")
-      zip(zipfile = zip_filename, files = tiff_files, flags = "-j")  # `-j` removes directory structure
+      zip(zipfile = zip_filename, files = tiff_files, flags = "-j")
       
-      # Copy ZIP file to the provided download location
+      # Copy ZIP file to chosen location
       file.copy(zip_filename, file, overwrite = TRUE)
+      
+      # Clean up temporary files
+      unlink(c(tiff_files, zip_filename), force = TRUE)
     }
   )
-  
 }
