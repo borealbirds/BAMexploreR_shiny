@@ -3,12 +3,12 @@ add_species_layers <- function(map, sppMap, nameDisplay, versionSel, modYr, band
   # Define a color palette (same for all species)
   pal <- colorNumeric(palette = brewer.pal(9, "YlGnBu"), domain = unlist(lapply(sppMap, function(x) values(x[[1]]))), na.color = "transparent")
   added_layers <- c()
-  
+  #browser()
   # Loop through species and add raster layers
   for (spp_name in names(sppMap)) {
     raster_layer <- sppMap[[spp_name]]  # Extract the mean layer
     raster_layer <- terra::project(raster_layer, "EPSG:4326")  # Reproject to WGS84
-    
+
     target_extent <- ext(-177.9919, 30.65155, -18.12997, 81.60892)
     r_ext <- ext(raster_layer)
     if (xmin(r_ext) < xmin(target_extent) ||
@@ -19,15 +19,16 @@ add_species_layers <- function(map, sppMap, nameDisplay, versionSel, modYr, band
       # Crop raster
       raster_layer <- crop(raster_layer, target_extent)
     } 
-
+    
     sp_name <- spp_list %>%
-      filter(speciesCode == spp_name) %>%
+      filter(speciesCode == substr(spp_name, 1, 4)) %>%
       pull(!!sym(nameDisplay))
     
     options(leaflet.maxbytes = 1e8)  
 
     sp_name <- if (versionSel == "v5") {
-      paste(sp_name, versionSel, modYr, sep = "_")
+      paste(sp_name, "v5", substr(spp_name, nchar(spp_name) - 3, nchar(spp_name)), sep = "_")
+      #paste(sp_name, versionSel, modYr, sep = "_")
     } else {
       paste(sp_name, versionSel, sep = "_")
     }
