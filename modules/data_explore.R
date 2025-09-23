@@ -33,30 +33,6 @@ bandUI  <- function(id) {
   )))
 }
 
-#dwdUI  <- function(id) {
-#  ns <- NS(id)
-#  tags$style(type="text/css", "#downloadData {background-color:white;color: black}")
-#  div(style = "margin-top: 40px;", hidden(downloadButton(ns("dwdNMoutput"), "Download species map")),
-#      tags$div(
-#        style = "font-size: 0.85em; color: white !important; font-weight: normal;",
-        
-        # Title in italics
-#        tags$br(),
-#        tags$br(),
-#        tags$em("* Band definition"),
-        
-        # Definitions
-#        tags$p(
-#          tags$strong("mean"),
-#          " are regions of the study area ...",
-#          tags$br(),
-#          tags$strong("coefficient of variation"),
-#          " are regions within ..."
-#        )
-#      )
-#  )
-#}
-
 dwdUI <- function(id) {
   ns <- NS(id)
   tagList(
@@ -85,6 +61,7 @@ dwdUI <- function(id) {
     )
   )
 }
+
 sppUI  <- function(id) {
   ns <- NS(id)
   uiOutput(ns("speciesboxes"))
@@ -131,7 +108,12 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     
     if(input$versionSel == "v5"){
       output$yrSelect <- renderUI({
-        selectInput(ns("modYr"), label = div(style = "font-size:13px;margin-top: -10px;", "Select the year"), choices = model.year, selected = "2020")
+        #selectInput(ns("modYr"), label = div(style = "font-size:13px;margin-top: -10px;", "Select the year"), choices = model.year, selected = "2020")
+        selectizeInput(ns("modYr"), label = div(style = "font-size:13px;margin-top: -10px;", "Select the year"),
+                       choices = model.year,  multiple = TRUE,selected = "2020")
+                       #options = list(placeholder = "2020",
+                        #              maxItems = 12,
+                        #              maxOptions = 999, closeOnSelect = FALSE)),
       })
     }else{
       output$yrSelect <- renderUI({
@@ -158,8 +140,7 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
       addLayersControl(position = "topright",
                        overlayGroups = c("BCR"),
                        options = layersControlOptions(collapsed = FALSE))
-  }, once= TRUE)
-  
+  }) 
   
   selected_subunits <- reactive({
     req(subunit_names())  # Ensure subunit names exist
@@ -273,6 +254,15 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     yearSelect <- if(input$versionSel == "v5") input$modYr else NULL
     
     sppMap <- bam_get_layer(spp_listsub, input$versionSel, destfile = tempdir(), crop_ext= NULL, year = yearSelect, bcrNM=selected_subunits())
+    
+    # Assign raster name
+    rast_names <- unlist(lapply(spp_listsub, function(spp) {
+      region <- ifelse(length(selected_subunits()) == 1, selected_subunits(), "mosaic")
+      if(input$versionSel == "v5") paste(spp, region, yearSelect, sep = "_") else paste(spp, region, sep = "_")
+      }))
+    names(sppMap) <- rast_names 
+    
+    # Store in rv
     reactiveVals$sppSelectCache(sppMap)
     sppMap_layer <- lapply(sppMap, function(x) x[[1]])
     reactiveVals$bcrCache(selected_subunits())
@@ -281,7 +271,6 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     map_bounds <- c(bbox_vals$xmin, bbox_vals$ymin, bbox_vals$xmax, bbox_vals$ymax)
     
     myMapProxy %>%
-      #clearImages() %>%
       clearControls() %>%
       clearGroup("BCR") %>%
       clearGroup("highlighted") %>%
@@ -297,13 +286,13 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
       shinyjs::show("band")
     }
     
-    new_ids <- vapply(input$sppSelect, function(name) {
-      if (input$versionSel == "v5") {
-        paste(name, input$versionSel, input$modYr, sep = "_")
-      } else {
-        paste(name, input$versionSel, sep = "_")
-      }
-    }, character(1))
+    if (input$versionSel == "v5") {
+      new_ids <- unlist(lapply(input$sppSelect, function(spp) {
+        paste(spp, input$versionSel, input$modYr, sep = "_")
+      }))
+    } else {
+      new_ids <- paste(input$sppSelect, input$versionSel, sep = "_")
+    }
     
     # Add new_ids
     updated_ids <- unique(c(inserted_ids(), new_ids))
@@ -346,7 +335,9 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
   })
   
   observe({
+    
     spp_names <- names(reactiveVals$sppSelectCache())
+    spp_names <- substr(spp_names,1,4)
     species_choices <- switch(
       input$sppDisplay,
       "speciesCode"   = spp_list$speciesCode,
@@ -385,9 +376,9 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
         "scientificName"= spp_list$scientificName
       )
       display_names <- if (input$versionSel == "v5")
-        paste(species_choices[match(spp_names, spp_list$speciesCode)], input$versionSel, input$modYr, sep = "_")
+        paste(species_choices[match(substr(spp_names,1,4), spp_list$speciesCode)], input$versionSel, input$modYr, sep = "_")
       else
-        paste(species_choices[match(spp_names, spp_list$speciesCode)], input$versionSel, sep = "_")
+        paste(species_choices[match(substr(spp_names,1,4), spp_list$speciesCode)], input$versionSel, sep = "_")
       
       selected <- reactiveVals$sppSelectCache()[display_names %in% names(input) &
                                                   purrr::map_lgl(display_names, ~ input[[.x]] %||% FALSE)]
@@ -399,11 +390,13 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
         raster_obj <- selected[[species_code]]
         
         display_names <- if (input$versionSel == "v5")
-          paste(species_code, input$versionSel, input$modYr, sep = "_")
-        else
-          paste(species_code, input$versionSel, sep = "_")
+          paste(species_choices[match(substr(species_code,1,4), spp_list$speciesCode)], input$versionSel, substr(species_code, nchar(species_code) - 3, nchar(species_code)), sep = "_")
         
-        tiff_path <- file.path(tempdir(), paste0(display_names, ".tif"))
+        else
+          paste(species_choices[match(substr(species_code,1,4), spp_list$speciesCode)], input$versionSel, sep = "_")
+        
+        tiff_path <- file.path(tempdir(), paste0(display_names
+                                                 , ".tif"))
         writeRaster(raster_obj, tiff_path, overwrite = TRUE)
         tiff_files <- c(tiff_files, tiff_path)
       }
