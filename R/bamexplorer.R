@@ -262,11 +262,11 @@ bam_get_layer <- function(spList, version, destfile, crop_ext = NULL,  year = NU
     } else if(length(bcrNM)>1 || (length(bcrNM) == 1 && version == "v4")){
       tiff_data <- download_raster(file_url, to_temp = (version == "v4"))
 
-      extent <- system.file(
-        "extdata",
-        ifelse(version == "v4", "BAM_BCRNMv4_5072.shp", "BAM_BCRNMv5_5072.shp"),
-        package = "BAMexploreR"
+      extent <- file.path(
+        "www", "data","5072",
+        ifelse(version == "v4", "BAM_BCRNMv4_5072.shp", "BAM_BCRNMv5_5072.shp")
       ) %>% vect()
+      
       extent <- extent[extent$subunit_ui %in% bcrNM, ]
       tiff_data <- crop_raster(tiff_data, extent)
 
