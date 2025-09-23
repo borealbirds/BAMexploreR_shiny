@@ -20,15 +20,16 @@ invisible(lapply(required_packages, library, character.only = TRUE))
 bcrv4.map <- vect('www/data/4326/BAM_BCRNMv4_4326.shp')
 bcrv5.map <- vect('www/data/4326/BAM_BCRNMv5_4326.shp')
 BCRNMv4 <- vect('www/data/5072/BAM_BCRNMv4_5072.shp')
-BCRNMv5 <- vect('www/data/5072/BAM_BCRNMv4_5072.shp')
+BCRNMv5 <- vect('www/data/5072/BAM_BCRNMv5_5072.shp')
 load("www/data/sysdata.rda")
 #load("www/data/BCRNM.RData")
 
 spp.grp <- c("COSEWIC","Cavity_Birds", "Waterfowl", "Marine_Birds","Shorebirds", "Wetland_Birds", "Birds_of_Prey",
              "Forest_Birds", "Grassland_Birds", "Aerial_Insectivores", "Arctic_Birds", "Long_Distance_Migrants")
 
-model.year <- c("1985","1990", "1995", "2000","2005", "2010", "2015", "2020")
-               
+#model.year <- c("1985","1990", "1995", "2000","2005", "2010", "2015", "2020")
+model.year <- c("2000","2005", "2010", "2015", "2020")
+
 spp_list <- read.csv('www/data/spp_List.csv')
 MB <- 1024^2
 
