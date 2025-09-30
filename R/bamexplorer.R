@@ -1,120 +1,71 @@
-
-
-### From file: bam_get_bcr.R ###
-
-##################################################################################
-#' Retrieve the list of BCR overlaid by the study area
-#'
-#' @param version A \code{character} specifying which version of the BAM landbird model to use. Valid options are "v4" or "v5".
-#' @param ext A \code{SpatVector} or \code{SpatRaster} used to define the extent for the cropping. If \code{NULL}, the mosaic
-#'  will be used as default.
-#'
-#' @return Vector of bcr that overlay the study area.
-#'
-#' @importFrom terra vect crs project
-#' @importFrom sf st_as_sf st_intersects
-#' @docType methods
-#' @author Melina Houle
-#' @rdname bam_get_bcr
-#' @export
-#' @examples
-#' subUnit<- bam_get_bcr("v5")
-bam_get_bcr <- function(version, ext = NULL) {
-
+bam_spp_list <- function(version, type = "speciesCode", guild = NULL) {
+  spdt <- spp_tbl
+  
   if (!version %in% c("v4", "v5")) {
     stop("Invalid version argument. Must be either 'v4' or 'v5'.")
   }
-
-  # Need output path
-  if (missing(ext)) {
+  
+  if (!type %in% c("speciesCode", "commonName", "scientificName")) {
+    stop("Invalid type argument. Must be one of 'speciesCode', 'commonName' or 'scientificName'.")
+  }
+  
+  if(is.null(guild)){
+    spcode <- spdt %>% dplyr::pull("speciesCode")
+  }else if(any(!(guild %in% guild_opt))){
+    print("Guild is invalid")
+  }else{
+    spcode <- spdt %>%
+      dplyr::filter(dplyr::if_any(tidyselect::all_of(guild), ~ . == 1)) %>%  # Use if_any to check across multiple columns
+      dplyr::pull("speciesCode")  # Extract species code
+  }
+  
+  url <- version.url$url[version.url$version == version]
+  response <- httr::GET(url)
+  content_text <- httr::content(response, "text")
+  if (httr::status_code(response) == 200) {
     if(version == "v4"){
-      ext <- terra::vect(system.file("extdata", "BAM_BCRNMv4_5072.shp", package = "BAMexploreR"))
-    }else if (version == "v5"){
-      ext <- terra::vect(system.file("extdata", "BAM_BCRNMv5_5072.shp", package = "BAMexploreR"))
-    }else{
-      stop("The version is not recognised by the function. BAM National Models are only available for v4 and v5.")
+      # Use regular expressions to parse
+      tiff_files <- regmatches(content_text, gregexpr('href="([^"]+\\.tif)"', content_text))
+      tiff_files <- unlist(tiff_files)
+      tiff_files <- gsub('href="|/"', '', tiff_files)
+      spList <- tiff_files %>%
+        stringr::str_sub(start = 6, end = 9) %>%
+        .[.%in%spcode]
+    } else if(version == "v5"){
+      # Use regular expressions to parse
+      subdirs <- regmatches(content_text, gregexpr('href="([^"]+/)"', content_text))
+      subdirs <- unlist(subdirs)
+      spList <- gsub('href="|/"', '', subdirs) %>%
+        .[!(. %in% "/data")]
+    } else {
+      print("You must specify either v4 or v5")
     }
+  } else {
+    # Return an error message if the request failed
+    return(paste("Error:", httr::status_code(response)))
   }
-
-  # Need SpatVector or SpatRaster and projection
-  if(!inherits(ext, "SpatVector") && !inherits(ext, "SpatRaster")){
-    stop("You need to provide a SpatRast or a SpatVect")
-  }else{
-    if (nchar(terra::crs(ext)) == 0) {
-      stop("CRS is missing or empty.")
-    }
+  
+  # Extract species list
+  if(type=="speciesCode"){
+    sp <- spdt %>%
+      dplyr::filter(speciesCode %in% spList,
+                    speciesCode %in% spcode) %>%
+      dplyr::pull(speciesCode)
+  }else if(type=="commonName") {
+    sp <- spdt %>%
+      dplyr::filter(speciesCode %in% spList,
+                    speciesCode %in% spcode) %>%
+      dplyr::pull(commonName)
+  }else if(type=="scientificName") {
+    sp <- spdt %>%
+      dplyr::filter(speciesCode %in% spList,
+                    speciesCode %in% spcode) %>%
+      dplyr::pull(scientificName)
   }
-
-  if(version == "v4"){
-    base_bcr <- terra::vect(system.file("extdata", "BAM_BCRNMv4_5072.shp", package = "BAMexploreR"))
-  }else if(version == "v5"){
-    base_bcr <- terra::vect(system.file("extdata", "BAM_BCRNMv5_5072.shp", package = "BAMexploreR"))
-  }else{
-    stop("Model version doesn't exist.")
-  }
-
-  # Convert SpatVect objects to sf objects for use with tmap
-  base_sf <- sf::st_as_sf(base_bcr)
-
-  # Find intersections
-  if(!missing(ext)){
-    # Ensure both SpatVect objects are in the same CRS
-    if (terra::crs(ext) != terra::crs(base_bcr)) {
-      ext <- terra::project(ext, terra::crs(base_bcr))
-    }
-    user_sf <- sf::st_as_sf(ext)
-    intersected <- sf::st_intersects(base_sf, user_sf, sparse = FALSE)
-    intersected_subUnits <- base_sf$subunit_ui[apply(intersected, 1, any)]
-  }else{
-    intersected_subUnits <-base_sf$subunit_ui
-  }
-
-  # Return the results as a list
-  return(intersected_subUnits)
+  sp <- unique(sp)
+  return(sp)
 }
 
-
-### From file: bam_get_layer.R ###
-
-##################################################################################
-#' Download BAM species specific Landbird Models density maps based on list of species
-#'
-#' @param spList A \code{vector} of species to be downloaded.
-
-#' @param version A \code{character} specifying which version of the BAM Landbird Models to use. Valid options are "v4" or "v5".
-#'
-#' @param destfile A \code{character} indicating output path where the downloaded file is saved.
-#'
-#' @param crop_ext A \code{SpatVector} or A \code{SpatRaster} used to define the extent for the cropping.
-#' Or downloading valid BCR polygons from list, type: \code{bam_map_bcr("v4")} or \code{bam_map_bcr("v5")}
-#'
-#' @param year A \code{character} specifying the year for which the density map were generated. Only in v5.
-#' Valid options are "1985", "1990", "1995", "2000", "2005", "2010", "2015" and "2020". Default value is "2020".
-#'
-#' @param bcrNM A \code{vector} representing the BCR subunit name according to model version. Default is "mosaic".
-#'
-#' @return A list of \code{SpatRaster} objects. In addition to returning these objects,
-#' the function also downloads raster files to the directory specified by \code{destfile},
-#' as a side-effect.
-#'
-#' @examples
-#' bird <- bam_get_layer("TEWA", "v4", tempfile())
-#'
-#' bird <- bam_get_layer("TEWA", "v4", destfile = tempdir())
-#'
-#' @author Melina Houle
-#' @docType methods
-#' @rdname bam_get_layer
-#' @export
-#'
-#' @importFrom dplyr pull
-#' @importFrom magrittr %>%
-#' @importFrom httr GET content
-#' @importFrom tools file_ext file_path_sans_ext
-#' @importFrom stringr str_sub
-#' @importFrom terra vect rast project crop values crs writeRaster same.crs expanse
-#' @importFrom stats setNames
-#'
 bam_get_layer <- function(spList, version, destfile, crop_ext = NULL,  year = NULL, bcrNM= "mosaic") {
   # Valid Model versions
   if (!version %in% c("v4", "v5")) {
@@ -311,178 +262,8 @@ bam_get_layer <- function(spList, version, destfile, crop_ext = NULL,  year = NU
 }
 
 
-### From file: bam_map_bcr.R ###
-
-##################################################################################
-#' Map the boundaries of BCR subunits for a specified version.
-#'
-#' @param version A \code{character} specifying which version of the National Model to use. Valid options are "v4" or "v5".
-#' @param ext A \code{SpatVector} or a \code{SpatRaster} used to define an area of interest.
-#'
-#' @return Map illustrating the BCR and overlap extent if provided.
-#'
-#' @import tmap
-#' @importFrom terra vect crs project
-#' @importFrom RColorBrewer brewer.pal
-#' @importFrom tmap tm_shape tm_polygons tm_layout tm_text tm_add_legend tmap_mode
-#' @importFrom sf st_as_sf st_intersects
-#' @docType methods
-#' @author Melina Houle
-#' @rdname bam_map_bcr
-#' @export
-#' @examples
-#' subUnit<- bam_map_bcr("v5")
-bam_map_bcr <- function(version, ext = NULL) {
-  tmap::tmap_mode("plot")
-
-  if (!version %in% c("v4", "v5")) {
-    stop("Invalid version argument. Must be either 'v4' or 'v5'.")
-  }
-
-  # Need SpatVector or SpatRaster and projection
-  if (missing(ext)) {
-    if(version == "v4"){
-      ext <- terra::vect(system.file("extdata", "BAM_BCRNMv4_5072.shp", package = "BAMexploreR"))
-    }else {
-      ext <- terra::vect(system.file("extdata", "BAM_BCRNMv5_5072.shp", package = "BAMexploreR"))
-    }
-  }else {
-    if(!inherits(ext, "SpatVector") && !inherits(ext, "SpatRaster")){
-      stop("You need to provide a SpatRast or a SpatVect")
-    }else{
-      if (nchar(terra::crs(ext)) == 0) {
-        stop("CRS is missing or empty.")
-      }
-    }
-  }
-
-  if(version == "v4"){
-    base_bcr <- terra::vect(system.file("extdata", "BAM_BCRNMv4_5072.shp", package = "BAMexploreR"))
-    ncat <-16
-  }else if(version == "v5"){
-    base_bcr <- terra::vect(system.file("extdata", "BAM_BCRNMv5_5072.shp", package = "BAMexploreR"))
-    ncat <-19
-  }else{
-    stop("Model version doesn't exist.")
-  }
-
-  if (length(terra::intersect(base_bcr, ext)) == 0) {
-    warning("The provided extent does not intersect with any BCR sub-units.")
-  }
-
-  label_sf <- sf::st_as_sf(data.frame(
-    X = base_bcr$X,
-    Y = base_bcr$Y,
-    label = base_bcr$subunit_ui,
-    stringsAsFactors = FALSE
-  ), coords = c("X", "Y"), crs = terra::crs(base_bcr))
-
-  # Ensure both SpatVect objects are in the same CRS
-  if (terra::crs(ext) != terra::crs(base_bcr)) {
-    ext <- terra::project(ext, terra::crs(base_bcr))
-  }
-  # Convert SpatVect objects to sf objects for use with tmap
-  base_sf <- sf::st_as_sf(base_bcr)
-  user_sf <- sf::st_as_sf(ext)
-
-  # Create the tmap
-  # Generate a larger palette and subset it to get exactly 25 colors
-  custom_palette <- RColorBrewer::brewer.pal(12, "Set3")  # Generate 12 colors from the Set3 palette
-  custom_palette <- rep(custom_palette, length.out = ncat)  # Repeat the palette to get 25 colors
-
-  tmap <- tmap::tm_shape(base_sf) +
-      tmap::tm_polygons(fill = "subunit_ui",
-                        fill.scale = tm_scale_categorical(values = custom_palette),
-                        col = "black", col_alpha = 0.5,
-                        fill.legend = NULL,
-                        id = "subunit_ui") +
-      tmap::tm_add_legend(type = "polygons",  # Updated from "fill"
-                          labels = unique(base_sf$subunit_ui),
-                          title = "BCR subunit",
-                          fill = custom_palette[seq_along(unique(base_sf$subunit_ui))]) +  # Use `fill` instead of `col`
-
-      tmap::tm_layout(legend.outside = TRUE, legend.is.portrait = FALSE, legend.stack = "horizontal")
-
-  if(!missing(ext)){
-    tmap <- tmap +
-      tmap::tm_shape(user_sf) +
-      tmap::tm_polygons(fill = NA, fill_alpha = 0, col = "black", col_alpha = 1, lwd = 3, fill.legend = NULL) +
-      tmap::tm_add_legend(type = "polygons", labels = "User AOI", fill = NA, col = "black") + # Add legend item for user_sf
-      tmap::tm_layout(legend.outside = TRUE, legend.stack = "vertical")
-  }
-
-  # Return the results as a list
-  return(tmap)
-}
-
 
 ### From file: bam_occurrence.R ###
-
-##################################################################################
-#' Estimate a presence/absence threshold using a Lorenz curve
-#'
-#' @description This function fits a Lorenz curve to a raster's density
-#' values using \code{opticut::lorenz()}.
-#' The Lorenz curve is not plotted. See package \code{opticut} for
-#' inspecting Lorenz curves. Instead, the plot generated by \code{plot=TRUE} is the user's
-#' input density raster re-coded to presence (1) / absence (0) values.
-#'
-#'
-#' @param raster_list A raster of the "Area of Interest". Defined and created via Melina's function(s).
-#'
-#' @param quantile Default is \code{"by_lorenz"}, and the  optimum threshold is estimated via
-#' \code{opticut::lorenz()} as the pixel density when the slope of the tangent of the Lorenz function is 1.
-#' If a custom threshold is preferred, set this argument using a \code{numeric} between 0 and 1.
-#' This value indicates a cumulative proportion of pixels, above which all raster pixel values are assigned as "presence".
-#' Raster pixel values below the quantile are assigned "absent". E.g. By setting \code{quantile=0.8},
-#' the threshold density for separating presence versus absence is whatever pixel value accumulates 80% of the total
-#' pixels from the raster.
-#'
-#' @param plot Default is \code{TRUE} for visualizing occurrence patterns.
-#'
-#' @return A list with:
-#' \describe{
-#'   \item{raster}{A \code{SpatRaster} with binary presence (1) / absence (0) values.}
-#'   \item{occurrence_summary}{A \code{data.frame} with estimated area of occupancy
-#'   in km², before and after thresholding.}
-#'   }
-#'
-#' @details \code{opticut::lorenz()} generates a Lorenz plot where the x-axis represents the cumulative
-#' proportion of area (sorted by bird density, \code{p}) and the y-axis represents the cumulative
-#' proportion of the raster's total population (\code{L}). If bird density were uniform across
-#' space, the plot would follow a line with a slope of 1. In reality birds are not distributed evenly
-#' on the landscape. \code{lorenz()} estimates a pixel density threshold separating "presence" from "absence".
-#' The threshold is defined as the point on the Lorenz curve where the tangent has a slope of 1 and \code{p - L}
-#' is maximized. See \code{?opticut::lorenz} for details.
-#' Note that in some cases, the Lorenz-derived threshold is similar to the mean density, however, they
-#' estimate different ecological quantities and are not inherently equal.
-#'
-#'
-#'
-#'
-#' @importFrom opticut lorenz iquantile
-#' @importFrom terra rast values setValues
-#' @importFrom dplyr arrange bind_rows
-#' @importFrom purrr map imap map_dbl
-#' @importFrom tibble tibble
-#' @export
-#' @examples
-#'
-#' # download v4 rasters for Tennessee Warbler and Ovenbird
-#' rasters <- bam_get_layer(c("TEWA", "OVEN"), "v4", destfile=tempdir())
-#'
-#' # visualize core habitat
-#' bam_occurrence(rasters)
-#'
-#' # set custom threshold and compare core habitat
-#' bam_occurrence(rasters, quantile=0.8)
-#'
-#' # analyse core habitat in a custom area, using v5 predictions for Tennessee Warbler
-#' aoi_sf <- vect(system.file("extdata", "vignette_poly_5072.shp", package = "BAMexploreR"))
-#' rasterv5 <- bam_get_layer("TEWA", "v5",  crop_ext = aoi_sf, destfile = tempdir(), year = "2020")
-#' bam_occurrence(rasterv5)
-#'
-#'
 
 bam_occurrence <- function(raster_list, quantile="by_lorenz", plot=TRUE){
 
@@ -836,18 +617,15 @@ bam_predictor_barchart <- function(species = "all", bcr = "all",  groups = c("sp
   }
 
   # load bam_predictor_importance_v* from data folder
-  #load(system.file("R/sysdata.rda", package = "BAMexploreR"))
   if (version == "v5") {
-    #data("bam_predictor_importance_v5", package = "BAMexploreR")
     data <- bam_predictor_importance_v5
   } else {
-    #data("bam_predictor_importance_v4", package = "BAMexploreR")
     data <- bam_predictor_importance_v4
   }
 
   # convert user specified species to FLBCs
   if (!identical(species, "all")){
-    species <- standardize_species_names(species_input = species, spp_tbl = BAMexploreR:::spp_tbl)
+    species <- standardize_species_names(species_input = species, spp_tbl = spp_tbl)
   }
 
   # check if user specified species are in `data`
@@ -992,18 +770,15 @@ bam_predictor_importance <- function(species = "all", bcr = "all", group = "spp"
   }
 
   # load bam_predictor_importance_v* from data folder
-  #load(system.file("R/sysdata.rda", package = "BAMexploreR"))
   if (version == "v5") {
-    #data("bam_predictor_importance_v5", package = "BAMexploreR")
     data <- bam_predictor_importance_v5
   } else {
-    #data("bam_predictor_importance_v4", package = "BAMexploreR")
     data <- bam_predictor_importance_v4
   }
 
   # convert user specified species to FLBCs
   if (!identical(species, "all")){
-    species <- standardize_species_names(species_input = species, spp_tbl = BAMexploreR:::spp_tbl)
+    species <- standardize_species_names(species_input = species, spp_tbl = spp_tbl)
   }
 
   # check if user specified species are in `data`

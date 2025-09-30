@@ -21,9 +21,12 @@ server <- function(input, output, session) {
     selected_subunits = reactiveValues(selected = character()),
     mapCache = reactiveVal(0),
     sppListCache = reactiveVal(NULL),
+    sppDisplay = reactiveVal(NULL),
     sppSelectCache = reactiveVal(NULL),
     bcrCache = reactiveVal(NULL),
-    inserted_ids = reactiveVal(character())
+    inserted_ids = reactiveVal(character()),
+    data_ready = reactiveVal(FALSE),
+    pop_module_out = reactiveVal(NULL)
   )
   
   ######################## #
@@ -36,6 +39,29 @@ server <- function(input, output, session) {
     includeMarkdown(file)
   })
 
+  # Control right Panel
+  output$rightPanel <- renderUI({
+    if (input$tabs == "data") {
+      tabsetPanel(
+        tabPanel("Download",
+                 bandUI("explore_module"),
+                 sppUI("explore_module"),
+                 dwdUI("explore_module")
+        )
+      )
+    } else if(input$tabs == "popstats"){
+      tabsetPanel(
+        tabPanel("Download",
+                 br(),
+                 br(),
+                 sppUI("explore_module"),
+                 dwdUI("explore_module")
+        )
+      )
+    }
+  })
+  
+  
   # Help Component
  # help_modules <- c("data", "dist")
   #lapply(help_modules, function(module) {
@@ -66,14 +92,9 @@ server <- function(input, output, session) {
 
   ########################## #
   ########################## #
-  ### EXPLORE THE DATA   ###
+  ### ACCESS THE DATA   ###
   ########################## #
   ########################## #
-  ############################################################################################################ #
-  ### RUN Explore MODULE   ##
-  # 1.
-  # 2.
-  ############################################################################################################ #
   # Provide species UI
   observeEvent(input$tabs, {
     req(input$tabs == "data")
@@ -83,6 +104,75 @@ server <- function(input, output, session) {
       spp_list = spp_list,
       layers = layers,
       myMap = myMap,
+      reactiveVals = reactiveValsList  # Pass the entire list
+    )
+    
+  })
+  
+  ################################################################################################
+  # Observe on tabs
+  ################################################################################################
+  observe({
+    req(input$`pop_module-popAnalysis`)
+    if (input$`pop_module-popAnalysis` == "popArea") {
+      # switch away if user tries to view Population table
+      updateTabsetPanel(session, "centerPanel", selected = "Species occurrence")
+    }else{
+      updateTabsetPanel(session, "centerPanel", selected = "MapView")
+    }
+  })
+  
+  ########################### #
+  ########################### #
+  ### POPULATION ESTIMATES  ###
+  ########################### #
+  ########################### #
+  
+  observeEvent(input$tabs, {
+    req(input$tabs == "popstats")
+    
+    # Need to run getLayerNM first
+    if (!isTRUE(reactiveValsList$data_ready())) {
+      showModal(modalDialog(
+        title = "Data not ready",
+        "Please run Access the data before proceeding into Population Distribution",
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return(NULL)  # stop here
+    }
+    
+    callModule(
+      popSERVER, "pop_module",
+      layers = layers,
+      myMap = myMap,
+      reactiveVals = reactiveValsList  # Pass the entire list
+    )
+    
+  })
+  
+  ############################ #
+  ############################ #
+  ### PREDICTORS IMPORTANCE  ###
+  ############################ #
+  ############################ #
+  observeEvent(input$tabs, {
+    req(input$tabs == "pred")
+    
+    # Need to run getLayerNM first
+    if (!isTRUE(reactiveValsList$data_ready())) {
+      showModal(modalDialog(
+        title = "Data not ready",
+        "Please run Access the data before proceeding into Population Distribution",
+        easyClose = TRUE,
+        footer = modalButton("OK")
+      ))
+      return(NULL)  # stop here
+    }
+    
+    callModule(
+      predSERVER, "pred_module",
+      layers = layers,
       reactiveVals = reactiveValsList  # Pass the entire list
     )
     

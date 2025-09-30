@@ -92,7 +92,6 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     sub_names <- unique(bcr_map$subunit_ui)
     subnames <- c("mosaic", sub_names)
     
-    #subunit_names(subnames)
     reactiveVals$subunit_names(subnames)
     
     output$bcrCheckboxes <- renderUI({
@@ -108,7 +107,6 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     
     if(input$versionSel == "v5"){
       output$yrSelect <- renderUI({
-        #selectInput(ns("modYr"), label = div(style = "font-size:13px;margin-top: -10px;", "Select the year"), choices = model.year, selected = "2020")
         selectizeInput(ns("modYr"), label = div(style = "font-size:13px;margin-top: -10px;", "Select the year"),
                        choices = model.year,  multiple = TRUE,selected = "2020")
                        #options = list(placeholder = "2020",
@@ -149,23 +147,28 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     selected
   })
   
-  observe({
-    
-    req(layers$bcr_reactive(), selected_subunits())  # Ensure both are available
-    #req(mapCache() != input$getLayerNM[1])
+  observeEvent(selected_subunits(),{
+    req(layers$bcr_reactive())  
     
     bcr_map <- layers$bcr_reactive() 
-    selected_units <- subset(bcr_map, bcr_map$subunit_ui %in% selected_subunits())
     
-    if(input$mosaic){
-      selected_units <- bcr_map
+    selected_units <- subset(bcr_map, bcr_map$subunit_ui %in% selected_subunits())
+    if("mosaic" %in% selected_subunits()){ selected_units <- bcr_map }
+    
+    myMapProxy %>% clearGroup("highlighted")
+    
+    #if (length(selected) == 0 && !input$mosaic) {
+    #  return(NULL)
+    #}
+    if (length(selected_units) == 0) {
+      return(NULL)
     }
     
     bbox_vals <- terra::ext(bcr_map)
     map_bounds <- c(bbox_vals$xmin, bbox_vals$ymin, bbox_vals$xmax, bbox_vals$ymax)
     
     myMapProxy %>% 
-      clearGroup("highlighted") %>%  # Clear only highlighted group
+      #clearGroup("highlighted") %>%  # Clear only highlighted group
       fitBounds(map_bounds[1], map_bounds[2], map_bounds[3], map_bounds[4]) %>%
       addPolygons(data = selected_units, fillColor = "red", fillOpacity = 0.7, weight = 2, color = "black", group = "highlighted", options = leafletOptions(pane = "overlay"))
   })
@@ -313,6 +316,10 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     # Add download button to UI
     shinyjs::show("dwdNMoutput")
     shinyjs::show("bandDef") 
+    
+    reactiveVals$data_ready(TRUE)
+    reactiveVals$sppDisplay(input$sppDisplay)
+    
   }, ignoreNULL = TRUE)
   
   # Update map when band is selected
