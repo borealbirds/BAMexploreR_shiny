@@ -20,6 +20,9 @@ add_species_layers <- function(map, sppMap, nameDisplay, versionSel, modYr, band
       raster_layer <- crop(raster_layer, target_extent)
     } 
     
+    # get extent after crop
+    r_ext <- ext(raster_layer)
+    
     sp_name <- spp_list %>%
       filter(speciesCode == substr(spp_name, 1, 4)) %>%
       pull(!!sym(nameDisplay))
@@ -37,7 +40,8 @@ add_species_layers <- function(map, sppMap, nameDisplay, versionSel, modYr, band
       addRasterImage(raster_layer, colors = pal, group = sp_name, layerId = sp_name) %>%
       addLayersControl(position = "topright",
                        baseGroups = c(added_layers, sp_name),
-                       options = layersControlOptions(collapsed = FALSE))
+                       options = layersControlOptions(collapsed = FALSE)) %>%
+      fitBounds(lng1 = xmin(r_ext*0.8), lat1 = ymin(r_ext*0.8), lng2 = xmax(r_ext*0.8), lat2 = ymax(r_ext*0.8))
     
     #Track layer order (latest added on top)
     added_layers <- c(added_layers, sp_name)
