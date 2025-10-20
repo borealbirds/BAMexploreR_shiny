@@ -35,7 +35,6 @@ server <- function(input, output, session) {
   # UI for component guidance text
   output$gtext_module <- renderUI({
     req(input$tabs)
-    browser()
     file <- file.path('Rmd', glue("gtext_{input$tabs}.Rmd"))
     if (!file.exists(file)) return()
     includeMarkdown(file)
@@ -115,7 +114,7 @@ server <- function(input, output, session) {
     
     callModule(
       exploreSERVER, "explore_module",
-      spp_list = spp_list,
+      spp_list = spp_tbl,
       layers = layers,
       myMap = myMap,
       reactiveVals = reactiveValsList  # Pass the entire list

@@ -44,6 +44,7 @@ body {
   padding: 20px;                    /* adds space inside all sides */
     box-sizing: border-box;           /* ensures padding doesn't overflow */
 }
+
 /* Reset headers to normal case */
 
 .con.modHelpButton {

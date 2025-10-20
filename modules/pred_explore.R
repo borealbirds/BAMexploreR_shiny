@@ -97,7 +97,7 @@ predSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals)
     req(input$sppPred)
     spp_name <- input$sppPred
      
-    species_name <- spp_list %>%
+    species_name <- spp_tbl %>%
       filter(!!sym(display_col) %in% spp_name) %>%
       pull(speciesCode)
     

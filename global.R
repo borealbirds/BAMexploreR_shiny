@@ -28,8 +28,8 @@ spp.grp <- c("COSEWIC","Cavity_Birds", "Waterfowl", "Marine_Birds","Shorebirds",
 #model.year <- c("1985","1990", "1995", "2000","2005", "2010", "2015", "2020")
 model.year <- c("2000","2005", "2010", "2015", "2020")
 
-spp_list <- read.csv('www/data/spp_List.csv')
-bird_matrix <- readRDS('www/data/birdlist.rds')
+#spp_list <- read.csv('www/data/spp_List.csv')
+#bird_matrix <- readRDS('www/data/birdlist.rds')
 
 MB <- 1024^2
 
