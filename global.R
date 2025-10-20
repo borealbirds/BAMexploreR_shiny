@@ -2,8 +2,8 @@ options(repos = c(CRAN = "https://cran.rstudio.com"))
 
 required_packages <- c(
   "leaflet", "shiny", "rmarkdown", "markdown", "shinydashboard", "shinyjs", "shinyBS", 
-  "shinycssloaders",  "dplyr", "bslib", "leafem", "glue", "purrr",
-  "terra", "stringr",  "DT",  "httr", "RColorBrewer", "sf", "tools", "viridis", "knitr", "ggplot2"
+  "shinycssloaders",  "dplyr", "bslib", "leafem", "glue", "purrr", "opticut", "readr", "utils",
+  "terra", "stringr",  "DT",  "httr", "RColorBrewer", "sf", "tools", "viridis", "knitr", "ggplot2", "tidyr"
 )
 
 # Install any missing packages
@@ -29,6 +29,7 @@ spp.grp <- c("COSEWIC","Cavity_Birds", "Waterfowl", "Marine_Birds","Shorebirds",
 model.year <- c("2000","2005", "2010", "2015", "2020")
 
 spp_list <- read.csv('www/data/spp_List.csv')
+bird_matrix <- readRDS('www/data/birdlist.rds')
 
 MB <- 1024^2
 
@@ -48,11 +49,21 @@ for (file in base_module_files) source(file, local = TRUE)
 
 # The components that have modules. These names must match the values of the
 # tabs of the components in the UI.
-COMPONENTS <- c("data", "popstats")
+COMPONENTS <- c("data", "popstats", "pred")
 
 # Information about modules that various parts of the app need access to
 COMPONENT_MODULES <- list()
 
-
+#
+filter_species_by_bcr  <- function(birdlist, spList, bcrNM) {
+  valid_sp <- intersect(spList, names(birdlist))
+  
+  # subset birdlist for selected BCRs
+  subset <- birdlist[birdlist$bcr %in% bcrNM, c("bcr", valid_sp), drop = FALSE]
+  
+  mat <- as.matrix(subset[valid_sp])
+  keep <- colSums(mat) > 0
+  valid_sp[keep]
+}
 
 
