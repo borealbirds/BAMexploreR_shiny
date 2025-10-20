@@ -24,6 +24,7 @@ server <- function(input, output, session) {
     sppDisplay = reactiveVal(NULL),
     sppSelectCache = reactiveVal(NULL),
     bcrCache = reactiveVal(NULL),
+    bcrPred =  reactiveVal(NULL),
     inserted_ids = reactiveVal(character()),
     data_ready = reactiveVal(FALSE),
     pop_module_out = reactiveVal(NULL)
@@ -85,7 +86,6 @@ server <- function(input, output, session) {
   ######################## #
   ### MAPPING LOGIC ####
   ######################## #
-  # Initialize map
   # Initialize Leaflet map centered on Canada
   output$myMap <- renderLeaflet({
     
@@ -171,17 +171,6 @@ server <- function(input, output, session) {
   ############################ #
   observeEvent(input$tabs, {
     req(input$tabs == "pred")
-    
-    # Need to run getLayerNM first
-    if (!isTRUE(reactiveValsList$data_ready())) {
-      showModal(modalDialog(
-        title = "Data not ready",
-        "Please run Access the data before proceeding into Population Distribution",
-        easyClose = TRUE,
-        footer = modalButton("OK")
-      ))
-      return(NULL)  # stop here
-    }
     
     callModule(
       predSERVER, "pred_module",

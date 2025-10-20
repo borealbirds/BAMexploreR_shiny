@@ -16,12 +16,18 @@ predUI <- function(id, opt) {
     radioButtons(ns("predAnalysis"), "Select the type of analysis",
                  choices = c("Display mean relative predictor importance" = "predImpo",
                              "Display proportion of model predictors importance" = "predChart"), selected = "predImpo"),
-    
-    # Right panel (now delegated to axisUI)
-    #column(
-   #   6,
-    #  axisUI(ns("axis_module"))
-    #)
+    br(),
+    br(), 
+    selectInput(ns("versionSelPred"), "Choose version:", choices = c("Version 4" ="v4", "Version 5" = "v5"), selected = "v5"),
+    radioButtons(ns("sppDisplayPred"), "Display species using: ",
+                 choices = c("Species Code" = "speciesCode",
+                             "Common Name" = "commonName",
+                             "Scientific Name" = "scientificName"),
+                 selected = "commonName", inline = TRUE),
+    selectizeInput(ns("sppPred"), "Select a species:", choices = NULL, multiple = TRUE,
+                   options = list(placeholder = "Start typing to search...",maxOptions = 999, closeOnSelect = FALSE)),
+    uiOutput(ns("bcrCheckboxesPred")),
+    actionButton(ns("getPlot"), "Visualize the data", icon = icon(name = "fas fa-crow", lib = "font-awesome"), style="width:250px")
   )
 }
 
@@ -37,8 +43,6 @@ barchartUI <- function(id) {
 axisUI  <- function(id) {
   ns <- NS(id)
   tagList(
-    selectizeInput(ns("sppPred"), "Select a species:", choices = NULL, multiple = TRUE,
-                 options = list(placeholder = "Start typing to search...",maxOptions = 999, closeOnSelect = FALSE)),
     conditionalPanel(
       condition = sprintf("input['%s'] == 'predImpo'", ns("predAnalysis")),
       selectInput(ns("group"), "Type of grouping", choices = c("species" = 'spp',
@@ -80,49 +84,65 @@ predSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals)
   display_col <- reactiveVals$sppDisplay()
   sppMapname <- reactiveVals$inserted_ids
   sppNames <- sppMapname()
-  bcr <- reactiveVals$bcrCache()
+  bcr <- reactiveVals$bcrPred
+
+  observeEvent(input$versionSelPred,{
+    allSpp <- bam_spp_list(version = input$versionSelPred, type = input$sppDisplayPred)
+    updateSelectizeInput(session, "sppPred", choices = allSpp, server = TRUE)
+    
+    bcr_list <- if (input$versionSelPred == "v5") bcrv5.map$subunit_ui else bcrv4.map$subunit_ui
+    
+    reactiveVals$bcrPred(bcr_list)
+    
+    output$bcrCheckboxesPred <- renderUI({
+      checkbox_list <- lapply(bcr_list, function(name) {
+        div(checkboxInput(inputId = ns(name), label = name, value = FALSE))
+      })
+      
+      div(class = "checkbox-grid", do.call(tagList, checkbox_list))  # Wrap in a styled div
+    })
+  })
   
-  allSpp <- bam_spp_list(version = layers$version_reactive(), type = display_col)
-  selected_name <- unique(sub("_.*", "", sppNames))
-  spp_vec <- reactive(
-    selected_name
-  )
+  selected_bcr <- reactive({
+    req(bcr())  
+    bcr()[map_lgl(bcr(), ~ input[[.x]] %||% FALSE)]
+  })
+  
   #####################################
   ## observe on sppMap
-  observeEvent(spp_vec(), {
-    updateSelectizeInput(session, "sppPred", choices = spp_vec(), server = TRUE)
-  }, ignoreNULL = TRUE)
-  
-  output$predbarchart <- renderPlot({
-    req(input$sppPred)
-    spp_name <- input$sppPred
-     
-    species_name <- spp_tbl %>%
-      filter(!!sym(display_col) %in% spp_name) %>%
-      pull(speciesCode)
-    
-    if(input$predAnalysis =="predImpo"){
-      p <- bam_predictor_importance(species = species_name, bcr = bcr, group = input$group, version = layers$version_reactive(), plot=TRUE)
-      p + ggtitle(paste("Predictor importance for", spp_name, "using", input$group)) +
-        theme(plot.title = element_text(size = 18, face = "bold", hjust = 0.5))
-    } else{
-      #test on grouping
-      if(input$Xgroup == input$Ygroup){
-        showModal(modalDialog(
-          title = "XY grouping are the same",
-          "Please change one of the axis in order to create the barchart",
-          easyClose = TRUE,
-          footer = modalButton("OK")
-        ))
-        return(NULL)  # stop here
+  observeEvent(input$getPlot,{
+    output$predbarchart <- renderPlot({
+      req(input$sppPred)
+      
+      spp_name <- input$sppPred
+      
+      species_name <- spp_tbl %>%
+        filter(!!sym(input$sppDisplayPred) %in% spp_name) %>%
+        pull(speciesCode)
+      
+      if(input$predAnalysis =="predImpo"){
+        p <- bam_predictor_importance(species = species_name, bcr = selected_bcr(), group = input$group, version = input$versionSelPred, plot=TRUE)
+        p + ggtitle(paste("Predictor importance for", spp_name, "using", input$group)) +
+          theme(plot.title = element_text(size = 18, face = "bold", hjust = 0.5))
+      } else{
+        if(input$Xgroup == input$Ygroup){
+          showModal(modalDialog(
+            title = "XY grouping are the same",
+            "Please change one of the axis in order to create the barchart",
+            easyClose = TRUE,
+            footer = modalButton("OK")
+          ))
+          return(NULL)  # stop here
+        }
+        
+        p <- bam_predictor_barchart(species = species_name, bcr = selected_bcr(), group = c(input$Xgroup, input$Ygroup), version = input$versionSelPred, plot=TRUE)
+        p + ggtitle(paste("Proportion of model predictors importance for", spp_name)) +
+          theme(plot.title = element_text(size = 18, face = "bold", hjust = 0.5))
       }
       
-      p <- bam_predictor_barchart(species = species_name, bcr = bcr, group = c(input$Xgroup, input$Ygroup), version = layers$version_reactive(), plot=TRUE)
-      p + ggtitle(paste("Proportion of model predictors importance for", spp_name)) +
-        theme(plot.title = element_text(size = 18, face = "bold", hjust = 0.5))
-    }
-    
+    })
   })
+  
   
   ###########################################################
   ###########################################################
