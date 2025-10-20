@@ -34,7 +34,9 @@ server <- function(input, output, session) {
   ######################## #
   # UI for component guidance text
   output$gtext_module <- renderUI({
-    file <- file.path('Rmd', glue("gtext_{module()}.Rmd"))
+    req(input$tabs)
+    browser()
+    file <- file.path('Rmd', glue("gtext_{input$tabs}.Rmd"))
     if (!file.exists(file)) return()
     includeMarkdown(file)
   })
@@ -61,7 +63,19 @@ server <- function(input, output, session) {
     }
   })
   
-  
+  observe({
+    if (input$tabs == "data") {
+      shinyjs::show("explore_module-band")
+      shinyjs::show("explore_module-bandDef")
+      shinyjs::show("explore_module-dwdNMoutput")
+      shinyjs::show("explore_module-speciesboxes")
+    } else if (input$tabs == "popstats") {
+      shinyjs::hide("explore_module-band")
+      shinyjs::show("explore_module-speciesboxes")
+      shinyjs::show("explore_module-dwdNMoutput")
+      shinyjs::show("explore_module-bandDef")
+    }
+  })
   # Help Component
  # help_modules <- c("data", "dist")
   #lapply(help_modules, function(module) {

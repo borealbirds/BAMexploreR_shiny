@@ -56,21 +56,21 @@ tagList(
                                 "Explore National Model output", class = "explore_module"),
                             exploreUI("explore_module")
                    ),
-                   tabPanel("Module Guidance", icon = icon("circle-info"), uiOutput('gtext_module'))
+                   tabPanel("Module Guidance", icon = icon("circle-info"), div(style = "color: white !important; font-size: 14px; font-family: 'Cormorant Garamond', serif;", includeMarkdown("./Rmd/gtext_data.Rmd")))
                  )
                ),
                conditionalPanel(
                  condition="input.tabs == 'popstats'",
                  tabsetPanel(
                    tabPanel("Component", popUI("pop_module")),
-                   tabPanel("Module Guidance", icon = icon("circle-info"), uiOutput('gtext_module'))
+                   tabPanel("Module Guidance", icon = icon("circle-info"), div(style = "color: white !important; font-size: 14px; font-family: 'Cormorant Garamond', serif;", includeMarkdown("./Rmd/gtext_popstats.Rmd")))
                  )
                ),
                conditionalPanel(
                  condition="input.tabs == 'pred'",
                  tabsetPanel(
                    tabPanel("Component", predUI("pred_module")),
-                   tabPanel("Module Guidance", icon = icon("circle-info"), uiOutput('gtext_module'))
+                   tabPanel("Module Guidance", icon = icon("circle-info"), div(style = "color: white !important; font-size: 14px; font-family: 'Cormorant Garamond', serif;", includeMarkdown("./Rmd/gtext_pred.Rmd")))
                  )
                )
         ),
@@ -81,11 +81,15 @@ tagList(
                  tabsetPanel(id ="centerPanel",
                    tabPanel("MapView", 
                             leafletOutput("myMap", height = 700) %>% withSpinner(),
-                            popTable("pop_module")
+                            #popTable("pop_module")
+                            conditionalPanel(
+                              condition = "input.tabs == 'popstats'",
+                              popTable("pop_module")
+                            )
                    ),
                    tabPanel("Species occurrence",
                             conditionalPanel(
-                              condition = "input['pop_module-popAnalysis'] == 'popArea'",
+                              condition = "input.tabs == 'popstats' && input['pop_module-popAnalysis'] == 'popArea'",
                               popOccUI("pop_module")
                             )
                    ) 
@@ -97,7 +101,24 @@ tagList(
                )
         ),
         column(3,
-               uiOutput("rightPanel")
+               #uiOutput("rightPanel")
+               conditionalPanel(
+                 condition="input.tabs == 'data'" , 
+                 bandUI("explore_module"),
+                 sppUI("explore_module"),
+                 dwdUI("explore_module")
+               ),
+               conditionalPanel(
+                 condition="input.tabs == 'popstats'" , 
+                 popSppUI("pop_module"),
+                 popDwdUI("pop_module")
+               ),
+               conditionalPanel(
+                 condition="input.tabs == 'pred'" , 
+                 axisUI("pred_module"),
+                 predDwdUI("pred_module")
+               )
+               
         )
       )
     )

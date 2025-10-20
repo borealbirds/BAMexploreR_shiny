@@ -10,7 +10,7 @@ popUI <- function(id, opt) {
     
     div(
       id = ns("md_text"),
-      includeMarkdown("./Rmd/text_intro_tab.md")
+      includeMarkdown("./Rmd/popstats_tab.md")
     ),
     br(), 
     radioButtons(ns("popAnalysis"), "Select the type of analysis",
@@ -69,6 +69,22 @@ popOccUI <- function(id) {
   )
 }
 
+popDwdUI <- function(id) {
+  ns <- NS(id)
+  tagList(
+    useShinyjs(),
+    tags$style(type="text/css", "#downloadData {background-color:white;color: black}"),
+    div(style = "margin-top: 40px;",
+       downloadButton(ns("popDwdoutput"), "Download population estimates tables"),
+    )
+  )
+}
+
+popSppUI  <- function(id) {
+  ns <- NS(id)
+  uiOutput(ns("popsppboxes"))
+}
+
 popSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals) {
   
   ns <- session$ns
@@ -91,8 +107,9 @@ popSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals) 
   observe({
     reactiveVals$pop_module_out(input$popAnalysis)
   })
+  
   ############
-
+  #Renser UI
   output$popPanel <- renderUI({
     req(input$popAnalysis)
     
@@ -109,7 +126,23 @@ popSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals) 
     pop_aoi_result
   }, options = list(dom = 't'), rownames = FALSE)
   
+  # Render right panel checkboxInput
+  output$popsppboxes <- renderUI({
+    req(reactiveVals$inserted_ids())
+    
+    checkbox_list <- lapply(reactiveVals$inserted_ids(), function(id) {
+      checkboxInput(inputId = ns(id),
+                    label = tags$span(class = "dynamic-checkbox-label", id),
+                    value = FALSE)
+    })
+    
+    tagList(div("Select the species for which you want to download population size and occurence tables:",
+                    style = "color: white !important; font-size:14px; font-weight: bold; margin-top: 50px; margin-bottom: 30px;"),
+            checkbox_list
+            )
+  })
   
+  ###################################
   quantile <- reactive({
     req(input$quantileType)
     if(input$quantileType == "custom"){
@@ -138,6 +171,7 @@ popSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals) 
   
   output$popOccTbl <- DT::renderDataTable({
     req(input$popAnalysis=="popArea")
+    
     r <- occRasters()$occurrence_summary %>%
       filter(species == input$sppCache)
   }, options = list(dom = 't'), rownames = FALSE)
@@ -156,6 +190,64 @@ popSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals) 
     terra::plot(rpop, main = input$sppCache, col = c("white", "darkgreen"))
   })
   
+  observe({
+    req(reactiveVals$sppSelectCache())
+    
+    spp_names <- names(reactiveVals$sppSelectCache())
+    selected <- reactiveVals$sppSelectCache()[spp_names %in% names(input) & 
+                                                purrr::map_lgl(spp_names, ~ input[[.x]] %||% FALSE)]
+    if (length(selected) == 0) {
+      shinyjs::disable("popDwdoutput")  # Disable button
+    } else {
+      shinyjs::enable("popDwdoutput")   # Enable button
+    }
+  })
   
+  ###########################################################
+  ###########################################################
+  # Download
+  ###########################################################
+  ###########################################################
+  output$popDwdoutput <- downloadHandler(
+    filename = function() { "BAM_Tables_output.zip" },
+    content = function(file) {
+      
+      # Get selected species (checkboxes checked)
+      spp_names <- names(reactiveVals$sppSelectCache())
+      selected <- reactiveVals$sppSelectCache()[spp_names %in% names(input) &
+                                                  purrr::map_lgl(spp_names, ~ input[[.x]] %||% FALSE)]
+      
+      # ---- Proceed with download ----
+      tiff_files <- c()
+      
+      for (species_code in names(selected)) {
+        raster_obj <- occRasters()$occurrence_rasters[[species_code]]
+        tiff_name <- paste0(species_code, "_occurrence.tif")
+        writeRaster(raster_obj, file.path(tempdir(), tiff_name), overwrite = TRUE)
+        tiff_files <- c(tiff_files, tiff_name)
+      }
+      
+      occ_csv <- "BAM_species_occurrence.csv"
+      occ_out <- occRasters()$occurrence_summary %>% filter(species %in% names(selected))
+      readr::write_csv(occ_out, occ_csv)
+      
+      popsize_csv <- "BAM_species_popsize.csv"
+      pop_out <- pop_aoi_result %>% filter(species %in% names(selected))
+      readr::write_csv(pop_out, popsize_csv)
+      
+      all_files <- c(tiff_files, popsize_csv, occ_csv)
+      
+      # Create a ZIP file
+      setwd(tempdir())
+      zip::zip(zipfile = "BAM_population_estimates.zip", files = all_files)
+      
+      # Copy ZIP file to chosen location
+      file.copy("BAM_population_estimates.zip", file, overwrite = TRUE)
+      
+      # Clean up temporary files
+      unlink(c(tiff_files,"BAM_population_estimates.zip"), force = TRUE)
+    },
+    contentType = "application/zip"
+  )
   
 }
