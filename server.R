@@ -27,7 +27,9 @@ server <- function(input, output, session) {
     bcrPred =  reactiveVal(NULL),
     inserted_ids = reactiveVal(character()),
     data_ready = reactiveVal(FALSE),
-    pop_module_out = reactiveVal(NULL)
+    pop_module_out = reactiveVal(NULL),
+    band = reactiveVal(NULL),
+    sppOnMap = reactiveVal(NULL)
   )
   
   ######################## #
@@ -92,6 +94,15 @@ server <- function(input, output, session) {
     leaflet() %>%
       addMapPane(name = "ground", zIndex=380) %>%
       addMapPane(name = "overlay", zIndex=420) %>%
+      #add listener
+      htmlwidgets::onRender("
+      function(el, x) {
+        var map = this;
+        map.on('baselayerchange', function(e) {
+          Shiny.setInputValue('active_raster', e.name, {priority: 'event'});
+        });
+      }
+    ") %>%
       addProviderTiles("CartoDB.Positron", group="baseMap") %>%
       leafem::addMouseCoordinates() %>%
       # Fit bounds to Canada's extent
@@ -121,6 +132,39 @@ server <- function(input, output, session) {
     )
     
   })
+  
+  #build legend on selected species
+  #observeEvent(input$active_raster, {
+  observe({
+    req(input$active_raster, reactiveValsList$band())
+    selected <- input$active_raster
+    req(selected)
+    #browser()
+    r_bird <- reactiveValsList$sppSelectCache()[[selected]]
+    band_index <- as.numeric(reactiveValsList$band())
+    r <- r_bird[[band_index]]
+    req(r)
+    
+    # Dynamically set legend title
+    legend_title <- switch(reactiveValsList$band(),
+      "1" = "Mean Density (males/ha)",
+      "Variation in density")
+    
+    pal <- colorNumeric("YlGnBu", values(r), na.color = "transparent")
+    rng <- range(values(r), na.rm = TRUE)
+    breaks <- seq(rng[1], rng[2], length.out = 6)
+    
+    leafletProxy("myMap") %>%
+      clearControls() %>%
+      addLegend(
+        colors = pal(breaks),
+        labels = sprintf("%.4f", breaks),
+        title = legend_title,
+        position = "bottomright",
+        opacity = 1
+      )
+  })
+  
   
   ################################################################################################
   # Observe on tabs

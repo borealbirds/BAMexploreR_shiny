@@ -1,7 +1,5 @@
 add_species_layers <- function(map, sppMap, nameDisplay, versionSel, modYr, band_label, band_index) {
   
-  # Define a color palette (same for all species)
-  pal <- colorNumeric(palette = brewer.pal(9, "YlGnBu"), domain = unlist(lapply(sppMap, function(x) values(x[[1]]))), na.color = "transparent")
   added_layers <- c()
   
   # Loop through species and add raster layers
@@ -19,7 +17,9 @@ add_species_layers <- function(map, sppMap, nameDisplay, versionSel, modYr, band
       # Crop raster
       raster_layer <- crop(raster_layer, target_extent)
     } 
-    
+    # Define a color palette (same for all species)
+    pal <- colorNumeric(palette = brewer.pal(9, "YlGnBu"), domain =  values(raster_layer[[1]]), na.color = "transparent")
+
     # get extent after crop
     r_ext <- ext(raster_layer)
     
@@ -36,23 +36,5 @@ add_species_layers <- function(map, sppMap, nameDisplay, versionSel, modYr, band
     added_layers <- c(added_layers, spp_name)
   }
 
-  # Dynamically set legend title
-  legend_title <- switch(
-    band_label,
-    "mean" = "Mean Density (males/ha)",
-    "coefficient of variation" = "Variation in density",
-    band_label
-  )
-  
-  # Add legend once (after all species layers are added)
-  map <- map %>%
-    addLegend(
-      pal = pal,
-      values = unlist(lapply(sppMap, function(x) values(x))),
-      title = legend_title,
-      position = "bottomright",
-      opacity = 1
-    )
-  
   return(map)
 }

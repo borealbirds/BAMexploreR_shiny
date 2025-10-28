@@ -142,7 +142,7 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
   
   selected_subunits <- reactive({
     req(subunit_names())  # Ensure subunit names exist
-    #browser()
+    
     subunit_names()[map_lgl(subunit_names(), ~ input[[.x]] %||% FALSE)]
   })
   
@@ -150,7 +150,7 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     
     req(input$getLayerNM[1] ==0)
     req(layers$bcr_reactive())  
-    #browser()
+    
     bcr_map <- layers$bcr_reactive() 
     
     selected_units <- subset(bcr_map, bcr_map$subunit_ui %in% selected_subunits())
@@ -298,6 +298,9 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     sppMap_layer <- lapply(sppMap, function(x) x[[1]])
     reactiveVals$bcrCache(selected_subunits())
     
+    reactiveVals$band("1")
+    reactiveVals$sppOnMap(names(sppMap)[1])
+    
     bbox_vals <- terra::ext(bcr_map)
     map_bounds <- c(bbox_vals$xmin, bbox_vals$ymin, bbox_vals$xmax, bbox_vals$ymax)
     
@@ -310,6 +313,23 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
       add_species_layers(., sppMap_layer, input$sppDisplay, input$versionSel, input$modYr, input$band, band_index)  %>%
       addPolygons(data=bcr_map, color='black', fillColor = "white", fillOpacity = 0.05, weight=2, layerId = bcr_map$subunit_ui, popup = ~subunit_ui, group="BCR", options = leafletOptions(pane = "overlay"))
 
+    r_bird <- reactiveVals$sppSelectCache()[[1]]
+    r <- r_bird[[1]]
+    req(r)
+    
+    pal <- colorNumeric("YlGnBu", values(r), na.color = "transparent")
+    rng <- range(values(r), na.rm = TRUE)
+    breaks <- seq(rng[1], rng[2], length.out = 6)
+    
+    myMapProxy %>%
+      clearControls() %>%
+      addLegend(
+        colors = pal(breaks),
+        labels = sprintf("%.4f", breaks),
+        title = "Mean Density (males/ha)",
+        position = "bottomright",
+        opacity = 1
+      )
     removeModal()
     
     # Add band selection in v5 to UI
@@ -369,6 +389,28 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
       clearControls() %>%
       clearGroup("Species Data") %>%  # Clear the previous band layer
       add_species_layers(., sppMap_layer, input$sppDisplay, input$versionSel, input$modYr, input$band, band_index)  # Add the new selected band layer
+    reactiveVals$band(as.character(band_index))
+    
+    r <- sppMap_layer[[reactiveVals$sppOnMap()]]
+
+    # Dynamically set legend title
+    legend_title <- switch(input$band,
+                           "mean" = "Mean Density (males/ha)",
+                           "Variation in density")
+    
+    pal <- colorNumeric("YlGnBu", values(r), na.color = "transparent")
+    rng <- range(values(r), na.rm = TRUE)
+    breaks <- seq(rng[1], rng[2], length.out = 6)
+    
+    myMapProxy %>%
+      clearControls() %>%
+      addLegend(
+        colors = pal(breaks),
+        labels = sprintf("%.4f", breaks),
+        title = legend_title,
+        position = "bottomright",
+        opacity = 1
+      )
   })
   
   observe({

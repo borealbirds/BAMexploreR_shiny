@@ -122,7 +122,7 @@ predSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals)
       
       if(input$predAnalysis =="predImpo"){
         p <- bam_predictor_importance(species = species_name, bcr = selected_bcr(), group = input$group, version = input$versionSelPred, plot=TRUE)
-        p + ggtitle(paste("Predictor importance for", spp_name, "using", input$group)) +
+        p + ggtitle(paste("Predictor importance using ", input$group)) +
           theme(plot.title = element_text(size = 18, face = "bold", hjust = 0.5))
       } else{
         if(input$Xgroup == input$Ygroup){
@@ -136,7 +136,7 @@ predSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals)
         }
         
         p <- bam_predictor_barchart(species = species_name, bcr = selected_bcr(), group = c(input$Xgroup, input$Ygroup), version = input$versionSelPred, plot=TRUE)
-        p + ggtitle(paste("Proportion of model predictors importance for", spp_name)) +
+        p + ggtitle(paste("Proportion of model predictors importance using ", input$Xgroup, " and ", input$Ygroup)) +
           theme(plot.title = element_text(size = 18, face = "bold", hjust = 0.5))
       }
       
@@ -169,10 +169,6 @@ predSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals)
         writeRaster(raster_obj, file.path(tempdir(), tiff_name), overwrite = TRUE)
         tiff_files <- c(tiff_files, tiff_name)
       }
-      
-      png(file, width = 800, height = 600, res = 120)
-      plot(cars, main = "Example PNG download")
-      dev.off()
     },
     contentType = "image/png"  # Optional, sets correct MIME type
   )
