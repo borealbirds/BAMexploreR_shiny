@@ -192,7 +192,7 @@ server <- function(input, output, session) {
     if (!isTRUE(reactiveValsList$data_ready())) {
       showModal(modalDialog(
         title = "Data not ready",
-        "Please run Access the data before proceeding into Population Distribution",
+        "Please run Model Access before using the Population Distribution section",
         easyClose = TRUE,
         footer = modalButton("OK")
       ))

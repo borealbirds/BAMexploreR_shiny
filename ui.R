@@ -51,26 +51,26 @@ tagList(
                conditionalPanel(
                  condition="input.tabs == 'data'",
                  tabsetPanel(
-                   tabPanel("Component",
+                   tabPanel("Tool",
                             div(style = "color: white !important; font-size:20px; font-weight: bold; margin-top: 20px;", 
                                 "Explore National Model output", class = "explore_module"),
                             exploreUI("explore_module")
                    ),
-                   tabPanel("Module Guidance", icon = icon("circle-info"), div(style = "color: white !important; font-size: 14px; font-family: 'Cormorant Garamond', serif;", includeMarkdown("./Rmd/gtext_data.Rmd")))
+                   tabPanel("Instructions", icon = icon("circle-info"), div(style = "color: white !important; font-size: 14px; font-family: 'Cormorant Garamond', serif;", includeMarkdown("./Rmd/gtext_data.Rmd")))
                  )
                ),
                conditionalPanel(
                  condition="input.tabs == 'popstats'",
                  tabsetPanel(
-                   tabPanel("Component", popUI("pop_module")),
-                   tabPanel("Module Guidance", icon = icon("circle-info"), div(style = "color: white !important; font-size: 14px; font-family: 'Cormorant Garamond', serif;", includeMarkdown("./Rmd/gtext_popstats.Rmd")))
+                   tabPanel("Tool", popUI("pop_module")),
+                   tabPanel("Instructions", icon = icon("circle-info"), div(style = "color: white !important; font-size: 14px; font-family: 'Cormorant Garamond', serif;", includeMarkdown("./Rmd/gtext_popstats.Rmd")))
                  )
                ),
                conditionalPanel(
                  condition="input.tabs == 'pred'",
                  tabsetPanel(
-                   tabPanel("Component", predUI("pred_module")),
-                   tabPanel("Module Guidance", icon = icon("circle-info"), div(style = "color: white !important; font-size: 14px; font-family: 'Cormorant Garamond', serif;", includeMarkdown("./Rmd/gtext_pred.Rmd")))
+                   tabPanel("Tool", predUI("pred_module")),
+                   tabPanel("Instructions", icon = icon("circle-info"), div(style = "color: white !important; font-size: 14px; font-family: 'Cormorant Garamond', serif;", includeMarkdown("./Rmd/gtext_pred.Rmd")))
                  )
                )
         ),

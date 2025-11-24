@@ -5,8 +5,8 @@
 exploreUI <- function(id, opt) {
   ns <- NS(id)
   fluidPage(
-    selectInput(ns("versionSel"), "Choose version:", choices = c("Version 4" ="v4", "Version 5" = "v5"), selected = "v5"),
-    radioButtons(ns("sppDisplay"), "Display species using: ",
+    selectInput(ns("versionSel"), "Select model version (see 'Welcome' tab for version comparison):", choices = c("Version 4" ="v4", "Version 5" = "v5"), selected = "v5"),
+    radioButtons(ns("sppDisplay"), "Display species names using: ",
                  choices = c("Species Code" = "speciesCode",
                              "Common Name" = "commonName",
                              "Scientific Name" = "scientificName"),
@@ -18,16 +18,16 @@ exploreUI <- function(id, opt) {
                                  maxOptions = 999, closeOnSelect = FALSE)),
    div(style = "color: white !important; margin: 15px; margin-top: 10px; font-size:13px;font-weight: bold", "  --  Or  --"),
    selectInput(ns("sppGroup"), label = div(style = "font-size:13px;margin-top: -10px;", "Select a group of species"), choices = c("Please select", spp.grp), selected = "Please select"),
-   div(style = "color: white !important; margin-top: 50px; font-size:13px;", "Select the data extent"),
+   div(style = "color: white !important; margin-top: 50px; font-size:13px;", "Select the model extent ('mosaic' is Canada-wide)"),
    uiOutput(ns("bcrCheckboxes")),
    uiOutput(ns("yrSelect")),
-   actionButton(ns("getLayerNM"), "Visualize the data", icon = icon(name = "fas fa-crow", lib = "font-awesome"), style="width:250px"),
+   actionButton(ns("getLayerNM"), "Visualize model on map", icon = icon(name = "fas fa-crow", lib = "font-awesome"), style="width:250px"),
   )
 }
 
 bandUI  <- function(id) {
   ns <- NS(id)
-  div(style = "margin-top: 40px;", hidden(selectInput(ns("band"), label = "Select band *:", 
+  div(style = "margin-top: 40px;", hidden(selectInput(ns("band"), label = "Select band for visualization *:", 
               choices = c("mean", "coefficient of variation"), 
               selected = "mean"
   )))
