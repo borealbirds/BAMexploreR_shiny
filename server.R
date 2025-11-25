@@ -175,7 +175,7 @@ server <- function(input, output, session) {
       # switch away if user tries to view Population table
       updateTabsetPanel(session, "centerPanel", selected = "Species occurrence")
     }else{
-      updateTabsetPanel(session, "centerPanel", selected = "MapView")
+      updateTabsetPanel(session, "centerPanel", selected = "Map View")
     }
   })
   
@@ -192,7 +192,7 @@ server <- function(input, output, session) {
     if (!isTRUE(reactiveValsList$data_ready())) {
       showModal(modalDialog(
         title = "Data not ready",
-        "Please run Model Access before using the Population Distribution section",
+        "Please run the Model Access tool before using the Population Distribution tool",
         easyClose = TRUE,
         footer = modalButton("OK")
       ))
