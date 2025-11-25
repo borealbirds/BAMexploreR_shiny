@@ -378,8 +378,8 @@ bam_occurrence <- function(raster_list, quantile="by_lorenz", plot=TRUE){
     return(list(occurrence_raster = binary_raster,
                 threshold_raster = threshold_raster,
                 threshold = optimum_threshold,
-                og_area_km2 = og_area_km2,
-                core_area_km2 = core_area_km2))
+                og_area_km2 = round(og_area_km2, -2),
+                core_area_km2 = round(core_area_km2, -2)))
 
   } # close thresholding function
 
@@ -511,7 +511,7 @@ bam_pop_size <- function(raster_list, crop_ext= NULL, group = NULL){
         dplyr::rename(density = mean) |>
         dplyr::filter(!is.na(density)) |>
         dplyr::group_by(dplyr::across(dplyr::all_of(group))) |>
-        dplyr::summarize(total_pop = sum(density)*100,
+        dplyr::summarize(total_pop = round(sum(density)*100, -2),
                          mean_density = round(mean(density), 3),
                          sd_density = round(sd(density), 3),
                          n_cells = dplyr::n()) |>
@@ -526,7 +526,7 @@ bam_pop_size <- function(raster_list, crop_ext= NULL, group = NULL){
         dplyr::rename(density = mean) |>
         dplyr::filter(!is.na(density)) |>
         dplyr::summarise(
-          total_pop   = sum(density) * 100,
+          total_pop   = round(sum(density) * 100, -2),
           mean_density = round(mean(density), 3),
           sd_density   = round(sd(density), 3),
           n_cells      = n()
@@ -563,7 +563,8 @@ bam_pop_size <- function(raster_list, crop_ext= NULL, group = NULL){
   }
 
   # output
-  return(list_of_summaries)
+  return(list_of_summaries |> 
+           dplyr::select(-group))
 }
 
 
