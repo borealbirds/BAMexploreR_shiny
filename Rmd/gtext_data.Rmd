@@ -3,31 +3,20 @@ title: "data"
 output: html_document
 ---
 
-## Placeholder for visualization tab 
+The 'Model Access' tool allows you to select a model or set of models, visualize on a map, and then download those model products as rasters.
 
-## Introduction
+##### Model selection
+Use the left hand side of the 'Model Access' tool to complete your model selection.
 
+- **Step 1.** Select a model version (currently V4 or V5). See the 'Welcome' tab for a comparison of the two model versions.
+- **Step 2.** Select your focal species. You can search species by four-leter AOU code, common name, or scientific name. Select your focal species with one of three approaches: (1) select a single species using the 'Select a species' bar, (2) select multiple species using the 'Select a species' bar by continuing to type and search for species to create a list, (3) select a group of species, including group options for species of conservation concern, guild, and classifications from The State of Canada’s Birds report, which organizes species by broad biomes and groups that exhibit distinct and notable population trends.
+- **Step 3.** Select your model extent. The BAM landbird models are built as individual models for each Bird Conservation Region (BCR) and then mosaiced together into a wall-to-wall prediction for Canada. There are therefore three approaches for selecting your model extent: (1) select the Canada-wide "mosaic" version, (2) select a single BCR (i.e., a single model), (3) select multiple BCRs, which are cropped and masked from the mosaiced version. When you select a BCR, it will be highlighted on the map in red.
+- **Step 4.** Version 5 models only! Select the year(s) of interest. Version 5 models are available for every 5 years from 1990 to 2020. Version 4 models are available as 2015 predictions only.
+- **Step 5.** Hit "Visualize model" to see your selected models on the map! Be patient while the app access the models.
+- **Step 6.** Explore the visualized model to confirm your download. If you've requested multiple species or years, you can toggle them on and off with the legend inset in the map. You can also switch between the density prediction and the variation in density. 'mean' is the mean estimated density of male birds per hectare across 32 independent model runs. 'coefficient of variation' is the variation in density across those 32 independent model runs.
 
-## Description
+##### Model download
+Use the right hand side of the 'Model Access' tool to download your selected model(s).
 
-
-## Using the app
-
-Using the app consists of three simple steps:
-
-1. Select a species
-2. Select  the extent
-3. Download
-
-
-### 1. Select  a species
-
-
-### 2. Select  the extent
-
-
-
-### 3. Download
-
-
-
+- **Step 1.** Select the models you want to download using the checkboxes on the right hand panel.
+- **Step 2.** Hit 'Download selected model(s)' to download your final model selection as a .zip! A download menu will pop-up where you can select the location and filename of your download.

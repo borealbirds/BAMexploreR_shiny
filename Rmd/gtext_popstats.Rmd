@@ -3,12 +3,16 @@ title: "dist"
 output: html_document
 ---
 
-### **Placeholder for analysis**
+The 'Population Distribution' tool allows you to evaluate distribution and population size of the models selected using the 'Model Access' tool. 
+*Note you must complete the 'Model Access' tool before using the Population Distribution tool.*
 
-## Introduction
+##### Analysis selection
+Use the left hand panel to select the analysis of interest.
+- **Population size estimation:** estimates the total population size by summarizing predicted densities of males across the selected model. If this analysis is selected, the population summaries will appear below the map inset.
+- **Area of occurrence:** estimates a species area of occurrence using a threshold. There are two options for threshold selection: 1) a Lorenz curve is fitted to the density predicts, which distinguishes between areas of high and low predicted use, or 2) a user-defined quantile value. **Select the 'Area of Occurrence' tab on the map inset to see the thresholded occurrence predictions and the estimated area of occurrence below the map inset.**
 
+##### Results download
+Use the right hand panel to download the analysis results.
 
-    
-popstats tab
- 
-  
+- **Step 1.** Select the models you want to download the analysis results for using the checkboxes on the right hand panel.
+- **Step 2.** Hit 'Download selected estimates' to download your final analysis results as a .zip! A download menu will pop-up where you can select the location and filename of your download. This download will include 1) a table of population size estimates, 2) a table of area of occurrence estimates, and 3) rasters of the thresholded area of occurrence from the density model for all selected models.

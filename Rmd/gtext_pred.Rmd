@@ -3,15 +3,19 @@ title: "data"
 output: html_document
 ---
 
-## Placeholder for visualization tab 
+The 'Predictor Importance' tool allows you to explore the important predictors of interest in BAM's landbird density models.
 
-## Introduction
+The machine learning framework that BAM uses to produce the landbird density models provides an estimate of the relative importance of each predictor in the model. We can explore those importance metrics to understand the habitat relationships for species of interest in each model subregion. Note that these functions will only provide the *importance* of each predictor, not the shape or direction of the relationship, which can be nonlinear and include complex interactions with other predictors given the machine learning framework used.
 
+##### Summarize predictors
 
-## Description
+There are two ways to summarize the relative importance of the model predictors. 
+- **1. Dot-and-whisker:** Displays the mean and standard deviation of nine predictor classes. Relative importance values can be grouped by species or modelling region (Bird Conservation Region; BCR).
+- **2. Barplot:** Displays the mean relative importance only, but provides functionality for two grouping variables, including species, BCR, predictor class, or individual predictor.
 
-
-pred tab
-
-
-
+The steps to use the 'Predictor Importance' tool are similar to the 'Model Access' tool.
+- **Step 1.** Select a model version (currently V4 or V5). See the 'Welcome' tab for a comparison of the two model versions.
+- **Step 2.** Select one or more focal species. You can search species by four-leter AOU code, common name, or scientific name.
+- **Step 3.** Select one or more model extents. The BAM landbird models are built as individual models for each Bird Conservation Region (BCR) and then mosaiced together into a wall-to-wall prediction for Canada. Select all model extents if you would like to summarize for all of Canada.
+- **Step 4.** Hit "Visualize results" to see the summarized data from your selected models!
+- **Step 5.** Select the groupings of interest using the drop down menus on the right hand panel. The figure will automatically update.
