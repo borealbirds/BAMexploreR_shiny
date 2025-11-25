@@ -5,7 +5,7 @@
 exploreUI <- function(id, opt) {
   ns <- NS(id)
   fluidPage(
-    selectInput(ns("versionSel"), "Select model version (see 'Welcome' tab for version comparison):", choices = c("Version 4" ="v4", "Version 5" = "v5"), selected = "v5"),
+    selectInput(ns("versionSel"), "Select model version:", choices = c("Version 4" ="v4", "Version 5" = "v5"), selected = "v5"),
     radioButtons(ns("sppDisplay"), "Display species names using: ",
                  choices = c("Species Code" = "speciesCode",
                              "Common Name" = "commonName",
@@ -17,17 +17,17 @@ exploreUI <- function(id, opt) {
                                  maxItems = 12,
                                  maxOptions = 999, closeOnSelect = FALSE)),
    div(style = "color: white !important; margin: 15px; margin-top: 10px; font-size:13px;font-weight: bold", "  --  Or  --"),
-   selectInput(ns("sppGroup"), label = div(style = "font-size:13px;margin-top: -10px;", "Select a group of species"), choices = c("Please select", spp.grp), selected = "Please select"),
-   div(style = "color: white !important; margin-top: 50px; font-size:13px;", "Select the model extent ('mosaic' is Canada-wide)"),
+   selectInput(ns("sppGroup"), label = div(style = "font-size:13px;margin-top: -10px;", "Select a group of species:"), choices = c("Please select", spp.grp), selected = "Please select"),
+   div(style = "color: white !important; margin-top: 20px; font-size:13px;", "Select the model extent:"),
    uiOutput(ns("bcrCheckboxes")),
    uiOutput(ns("yrSelect")),
-   actionButton(ns("getLayerNM"), "Visualize model on map", icon = icon(name = "fas fa-crow", lib = "font-awesome"), style="width:250px"),
+   actionButton(ns("getLayerNM"), "Visualize model(s)", icon = icon(name = "fas fa-crow", lib = "font-awesome"), style="width:250px"),
   )
 }
 
 bandUI  <- function(id) {
   ns <- NS(id)
-  div(style = "margin-top: 40px;", hidden(selectInput(ns("band"), label = "Select band for visualization *:", 
+  div(style = "margin-top: 40px;", hidden(selectInput(ns("band"), label = "Select band for visualization:", 
               choices = c("mean", "coefficient of variation"), 
               selected = "mean"
   )))
@@ -39,25 +39,24 @@ dwdUI <- function(id) {
     useShinyjs(),
     tags$style(type="text/css", "#downloadData {background-color:white;color: black}"),
     div(style = "margin-top: 40px;",
-        hidden(downloadButton(ns("dwdNMoutput"), "Download species map")),
-        
-        # Wrap your text in an id so we can show it later
-        hidden(
-          div(
-            id = ns("bandDef"),
-            style = "font-size: 0.85em; color: white !important; font-weight: normal;",
-            tags$br(),
-            tags$br(),
-            tags$em("* Band definition"),
-            tags$p(
-              tags$strong("mean"),
-              " is mean density prediction across 32 independent model runs measured in male birds per hectare",
-              tags$br(),
-              tags$strong("coefficient of variation"),
-              " is the variation in density across model runs"
-            )
-          )
-        )
+        hidden(downloadButton(ns("dwdNMoutput"), "Download selected model(s)")),
+        # # Wrap your text in an id so we can show it later
+        # hidden(
+        #   div(
+        #     id = ns("bandDef"),
+        #     style = "font-size: 0.85em; color: white !important; font-weight: normal;",
+        #     tags$br(),
+        #     tags$br(),
+        #     tags$em("* Band definition"),
+        #     tags$p(
+        #       tags$strong("mean"),
+        #       ": mean density prediction across 32 independent model runs measured in male birds per hectare",
+        #       tags$br(),
+        #       tags$strong("coefficient of variation"),
+        #       ": the variation in density across 32 independnet model runs"
+        #     )
+        #   )
+        # )
     )
   )
 }
