@@ -52,8 +52,6 @@ tagList(
                  condition="input.tabs == 'data'",
                  tabsetPanel(
                    tabPanel("Tool",
-                            div(style = "color: white !important; font-size:20px; font-weight: bold; margin-top: 20px;", 
-                                "Explore National Model output", class = "explore_module"),
                             exploreUI("explore_module")
                    ),
                    tabPanel("Instructions", icon = icon("circle-info"), div(style = "color: white !important; font-size: 14px; font-family: 'Cormorant Garamond', serif;", includeMarkdown("./Rmd/gtext_data.Rmd")))
@@ -79,7 +77,7 @@ tagList(
                conditionalPanel(
                  condition="input.tabs == 'data' || input.tabs == 'popstats'" ,
                  tabsetPanel(id ="centerPanel",
-                   tabPanel("MapView", 
+                   tabPanel("Map View", 
                             leafletOutput("myMap", height = 700) %>% withSpinner(),
                             #popTable("pop_module")
                             conditionalPanel(
@@ -87,7 +85,7 @@ tagList(
                               popTable("pop_module")
                             )
                    ),
-                   tabPanel("Species occurrence",
+                   tabPanel("Species Occurrence",
                             conditionalPanel(
                               condition = "input.tabs == 'popstats' && input['pop_module-popAnalysis'] == 'popArea'",
                               popOccUI("pop_module")
@@ -116,7 +114,7 @@ tagList(
                conditionalPanel(
                  condition="input.tabs == 'pred'" , 
                  axisUI("pred_module"),
-                 predDwdUI("pred_module")
+#                 predDwdUI("pred_module")
                )
                
         )
