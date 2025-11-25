@@ -7,17 +7,10 @@ predUI <- function(id, opt) {
         font-size: 14px;
       }
     ", ns("md1_text")))),
-    
-    div(
-      id = ns("md1_text"),
-      includeMarkdown("./Rmd/pred_tab.md")
-    ),
     br(), 
-    radioButtons(ns("predAnalysis"), "Select the type of analysis",
-                 choices = c("Display mean relative predictor importance" = "predImpo",
-                             "Display proportion of model predictors importance" = "predChart"), selected = "predImpo"),
-    br(),
-    br(), 
+    radioButtons(ns("predAnalysis"), "Select the summary type:",
+                 choices = c("Dot-and-whisker" = "predImpo",
+                             "Barplot" = "predChart"), selected = "predImpo"),
     selectInput(ns("versionSelPred"), "Choose version:", choices = c("Version 4" ="v4", "Version 5" = "v5"), selected = "v5"),
     radioButtons(ns("sppDisplayPred"), "Display species using: ",
                  choices = c("Species Code" = "speciesCode",
@@ -26,8 +19,9 @@ predUI <- function(id, opt) {
                  selected = "commonName", inline = TRUE),
     selectizeInput(ns("sppPred"), "Select a species:", choices = NULL, multiple = TRUE,
                    options = list(placeholder = "Start typing to search...",maxOptions = 999, closeOnSelect = FALSE)),
+    div(style = "color: white !important; margin-top: 20px; font-size:13px;", "Select the model extent:"),
     uiOutput(ns("bcrCheckboxesPred")),
-    actionButton(ns("getPlot"), "Visualize the data", icon = icon(name = "fas fa-crow", lib = "font-awesome"), style="width:250px")
+    actionButton(ns("getPlot"), "Visualize results", icon = icon(name = "fas fa-crow", lib = "font-awesome"), style="width:250px")
   )
 }
 
@@ -72,7 +66,7 @@ predDwdUI <- function(id) {
     useShinyjs(),
     tags$style(type="text/css", "#downloadData {background-color:white;color: black}"),
     div(style = "margin-top: 40px;",
-        downloadButton(ns("predDwdoutput"), "Download predictors importance tables"),
+        downloadButton(ns("predDwdoutput"), "Download selected summaries"),
     )
   )
 }
