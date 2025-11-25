@@ -6,9 +6,9 @@
 
 <br>
 
-## Overvew
+## Overview
 
-The BAM Landbird Model Explorer is an Shiny application for downloading and analyzing landbird density models produced by the Boreal Avian Modelling Centre (BAM). 
+The BAM Landbird Model Explorer is a Shiny application for downloading and analyzing landbird density models produced by the Boreal Avian Modelling Centre (BAM). 
 
 <br>
 
@@ -16,10 +16,10 @@ The BAM landbird density models are species-specific predictions of the density 
 
 <br>
 
-The BAM Landbird Models Explorer has three sections:
+The BAM Landbird Models Explorer has three tools:
 
 **1.** *Model Access:* Select, view, and download the model products of interest.
-*Note you must complete this section before using the Population Distribution section*
+*Note you must use this tool before using the Population Distribution tool*
 
 **2.** *Population Distribution:* Evaluate distribution and population size from the models.   
 
