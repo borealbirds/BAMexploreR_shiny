@@ -8,14 +8,14 @@ popUI <- function(id, opt) {
       }
     ", ns("md_text")))),
     
-    div(
-      id = ns("md_text"),
-      includeMarkdown("./Rmd/popstats_tab.md")
-    ),
+    # div(
+    #   id = ns("md_text"),
+    #   includeMarkdown("./Rmd/popstats_tab.md")
+    # ),
     br(), 
-    radioButtons(ns("popAnalysis"), "Select the type of analysis",
+    radioButtons(ns("popAnalysis"), "Select the type of analysis:",
                  choices = c("Population size estimation" = "popSize",
-                             "Population area of occurence" = "popArea"), selected = "popSize"),
+                             "Area of occurence" = "popArea"), selected = "popSize"),
     conditionalPanel(
       condition = sprintf("input['%s'] == 'popArea'", ns("popAnalysis")),
       selectizeInput(ns("sppCache"), "Select a species:", choices = NULL, multiple = TRUE,
@@ -75,7 +75,7 @@ popDwdUI <- function(id) {
     useShinyjs(),
     tags$style(type="text/css", "#downloadData {background-color:white;color: black}"),
     div(style = "margin-top: 40px;",
-       downloadButton(ns("popDwdoutput"), "Download population estimates tables"),
+       downloadButton(ns("popDwdoutput"), "Download selected estimates"),
     )
   )
 }
