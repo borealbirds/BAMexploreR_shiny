@@ -270,8 +270,39 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
       easyClose = TRUE,
       footer = NULL))
     }
+    #browser()
+    spp_filtered <- spp_list %>%
+      filter(speciesCode %in% spp_listfinal) %>%
+      pull(!!sym(input$sppDisplay))
+
+   
+    sppMap <- list()
+    for (i in seq_along(spp_listfinal)){
+      spp <- spp_listfinal[i]
+      spp_name <- spp_filtered[i] 
+      
+      url <- version.url$url[version.url$version ==input$versionSel]
+      if (input$versionSel == "v4") {
+        r <- rast(paste0(url,"pred-", spp, "-CAN-Mean.tif"))
+        rast_names <- paste(spp_name, input$versionSel, sep = "_")
+        sppMap[[rast_names]] <- r 
+      } else if (input$versionSel == "v5") {
+        region <- ifelse(length(selected_subunits()) == 1, selected_subunits(), "mosaic")
+        if(length(yearSelect) == 1){
+          r <- rast(paste0(url,"/",spp,"/", region, "/", spp,"_", region, "_", yearSelect, ".tif"))
+          rast_names <- paste(spp_name, input$versionSel, yearSelect, sep = "_")
+          sppMap[[rast_names]] <- r
+        }else{
+          for (yr in yearSelect){
+            r <- rast(paste0(url,"/",spp,"/", region, "/", spp,"_", region, "_", yr, ".tif"))
+            rast_names <- paste(spp_name, input$versionSel, yr, sep = "_")
+            sppMap[[rast_names]] <- r
+          }        
+        }
+      }
+    }
     
-    sppMap <- bam_get_layer(spp_listfinal, input$versionSel, destfile = tempdir(), crop_ext= NULL, year = yearSelect, bcrNM=selected_subunits())
+    #sppMap <- bam_get_layer(spp_listfinal, input$versionSel, destfile = tempdir(), crop_ext= NULL, year = yearSelect, bcrNM=selected_subunits())
     
     if (length(sppMap) == 0) {
       showModal(modalDialog(
@@ -280,17 +311,6 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
         footer = NULL))
       return()
     }
-    
-    spp_filtered <- spp_list %>%
-      filter(speciesCode %in% spp_listfinal) %>%
-      pull(!!sym(input$sppDisplay))
-    
-    # Assign raster name
-    rast_names <- unlist(lapply(spp_filtered, function(spp) {
-      region <- ifelse(length(selected_subunits()) == 1, selected_subunits(), "mosaic")
-      if(input$versionSel == "v5") paste(spp, input$versionSel, yearSelect, sep = "_") else paste(spp, input$versionSel, sep = "_")
-    }))
-    names(sppMap) <- rast_names 
     
     # Store in rv
     reactiveVals$sppSelectCache(sppMap)
@@ -316,18 +336,62 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     r <- r_bird[[1]]
     req(r)
     
-    pal <- colorNumeric("YlGnBu", values(r), na.color = "transparent")
-    rng <- range(values(r), na.rm = TRUE)
-    breaks <- seq(rng[1], rng[2], length.out = 6)
     
+    # Option 1
+    #vals <- values(r)
+    #vals <- vals[!is.na(vals)]
+    #
+    # Define your custom palette
+    #my_colors <- c(
+    #  '#f9ffaf', '#edef5c', '#bbdf5f', '#61c074', 
+    #  '#34af7c', '#008c80', '#007a7c', '#255668'
+    #)
+    
+    ## Compute range and breaks
+    #rng <- range(vals, na.rm = TRUE)
+    #breaks <- seq(rng[1], rng[2], length.out = length(my_colors) + 1)
+    
+    #pal <- colorBin(
+    #  palette = my_colors,
+    #  domain = vals,
+    #  bins = breaks,
+    #  na.color = "transparent"
+    #)
+    #myMapProxy %>%
+    #  clearControls() %>%
+    #  addLegend(
+    #    colors = my_colors,
+    #    labels = sprintf("%.4f", breaks[-1]),
+    #    title = "Mean Density (males/ha)",
+    #    position = "bottomright",
+    #    opacity = 1
+    #  )
+    
+    #Option 2
+    r[r ==0] <- NA
+    vals <- values(r)
+    rng_trim <- quantile(vals, probs = c(0.0025, 0.9975), na.rm = TRUE)
+    my_colors <- c(
+      '#f9ffaf', '#edef5c', '#bbdf5f', '#61c074',
+      '#34af7c', '#008c80', '#007a7c', '#255668'
+    )
+    pal <- colorBin(
+      palette = my_colors,
+      domain = vals,
+      bins = seq(rng_trim[1], rng_trim[2], length.out = length(my_colors) + 1),
+      na.color = "transparent"
+    )
     myMapProxy %>%
       clearControls() %>%
       addLegend(
-        colors = pal(breaks),
-        labels = sprintf("%.4f", breaks),
+        pal = pal,
+        values = vals,
         title = "Mean Density (males/ha)",
         position = "bottomright",
-        opacity = 1
+        opacity = 1,
+        labFormat = labelFormat(
+          digits = 4
+        )
       )
     removeModal()
     

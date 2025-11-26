@@ -150,19 +150,64 @@ server <- function(input, output, session) {
       "1" = "Mean Density (males/ha)",
       "Variation in density")
     
-    pal <- colorNumeric("YlGnBu", values(r), na.color = "transparent")
-    rng <- range(values(r), na.rm = TRUE)
-    breaks <- seq(rng[1], rng[2], length.out = 6)
+    #pal <- colorNumeric("YlGnBu", values(r), na.color = "transparent")
+    #rng <- range(values(r), na.rm = TRUE)
+    #breaks <- seq(rng[1], rng[2], length.out = 6)
+    
+    
+    
+    # Option 1
+    #vals <- values(r)
+    #vals <- vals[!is.na(vals)]
+    #
+    # Define your custom palette
+    #my_colors <- c(
+    #  '#f9ffaf', '#edef5c', '#bbdf5f', '#61c074', 
+    #  '#34af7c', '#008c80', '#007a7c', '#255668'
+    #)
+    
+    ## Compute range and breaks
+    #rng <- range(vals, na.rm = TRUE)
+    #breaks <- seq(rng[1], rng[2], length.out = length(my_colors) + 1)
+    
+    #leafletProxy("myMap") %>%
+    #  clearControls() %>%
+    #  addLegend(
+    #    colors = my_colors,
+    #    labels = sprintf("%.4f", breaks[-1]),
+    #    title = legend_title,
+     #   position = "bottomright",
+    #    opacity = 1
+    #  )
+    
+    # Option2
+    r[r ==0] <- NA
+    vals <- values(r)
+    rng_trim <- quantile(vals, probs = c(0.0025, 0.9975), na.rm = TRUE)
+    
+    my_colors <- c(
+      '#f9ffaf', '#edef5c', '#bbdf5f', '#61c074', 
+      '#34af7c', '#008c80', '#007a7c', '#255668'
+    )
+    pal <- colorBin(
+      palette = my_colors,
+      domain = vals,
+      bins = seq(rng_trim[1], rng_trim[2], length.out = length(my_colors) + 1),
+      na.color = "transparent"
+    )
     
     leafletProxy("myMap") %>%
-      clearControls() %>%
-      addLegend(
-        colors = pal(breaks),
-        labels = sprintf("%.4f", breaks),
-        title = legend_title,
-        position = "bottomright",
-        opacity = 1
-      )
+        clearControls() %>%
+        addLegend(
+          pal = pal,
+          values = vals,
+          title = legend_title,
+         position = "bottomright",
+          opacity = 1,
+         labFormat = labelFormat(
+           digits = 4
+         )
+        )
   })
   
   
