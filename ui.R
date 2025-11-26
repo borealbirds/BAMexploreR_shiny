@@ -39,7 +39,30 @@ tagList(
           tags$img(src = "bird.png", height = "350px",  style = "display: block; object-fit: contain; width: 100%; max-width: none;")),
       fluidRow(
         column(12, div(id = "markdown-content", includeMarkdown("Rmd/text_intro_tab.md")))
-      )
+      ),
+      tags$style(HTML("
+  #markdown-content, #markdown-content *:not(a) { 
+    color: white !important; 
+  }
+
+  /* Hyperlinks */
+  #markdown-content a:link {
+    color: #ABABAB !important;   /* Unclicked */
+    text-decoration: underline;
+  }
+
+  #markdown-content a:visited {
+    color: #EFEFEF !important;   /* Clicked / visited */
+    text-decoration: underline;
+  }
+
+  #markdown-content a:hover,
+  #markdown-content a:active,
+  #markdown-content a:focus {
+    color: #FFFFFF !important;   /* Hover / active */
+    text-decoration: underline;
+  }
+"))
     ),
     
     # Main layout for data + popstats tabs

@@ -1,0 +1,35 @@
+Package: BAMexploreR_shiny
+Type: Shiny
+Title: BAM Landbird Model Viewer
+Version: 1.0
+Imports:
+  markdown,
+  leaflet, 
+  shiny, 
+  rmarkdown,
+  markdown,
+  shinydashboard, 
+  shinyjs,
+  shinyBS,
+  lubridate,
+  shinycssloaders,
+  dplyr, 
+  bslib, 
+  leafem,
+  glue,
+  purrr,
+  opticut,
+  readr,
+  utils,
+  terra,
+  stringr,
+  DT,
+  httr, 
+  RColorBrewer,
+  sf, 
+  tools,
+  viridis,
+  knitr,
+  ggplot2,
+  tidyr,
+  stars

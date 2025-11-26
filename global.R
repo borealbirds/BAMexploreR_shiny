@@ -1,18 +1,13 @@
 options(repos = c(CRAN = "https://cran.rstudio.com"))
 
+# List of required packages
 required_packages <- c(
-  "leaflet", "shiny", "rmarkdown", "markdown", "shinydashboard", "shinyjs", "shinyBS", 
-  "shinycssloaders",  "dplyr", "bslib", "leafem", "glue", "purrr", "opticut", "readr", "utils",
-  "terra", "stringr",  "DT",  "httr", "RColorBrewer", "sf", "tools", "viridis", "knitr", "ggplot2", "tidyr"
+  "leaflet", "shiny", "rmarkdown", "markdown", "shinydashboard", "shinyjs", "shinyBS", "lubridate",
+  "shinycssloaders", "dplyr", "bslib", "leafem", "glue", "purrr", "opticut", "readr", "utils",
+  "terra", "stringr", "DT", "httr", "RColorBrewer", "sf", "tools", "viridis", "knitr", "ggplot2", "tidyr", "stars"
 )
 
-# Install any missing packages
-missing_packages <- required_packages[!(required_packages %in% installed.packages()[, "Package"])]
-if (length(missing_packages) > 0) {
-  install.packages(missing_packages)
-}
-
-# Load the packages
+# Load packages quietly
 invisible(lapply(required_packages, library, character.only = TRUE))
 
 # data component related
