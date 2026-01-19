@@ -1,6 +1,6 @@
 # BAMexploreR_shiny
 
-`BAMexploreR-shiny` is the Github repository for our [landbird model download and anlaysis app](https://borealbirds.shinyapps.io/bam_landbird_viewer_dev95/).
+`BAMexploreR-shiny` is the Github repository for our [landbird model download and anlaysis app]([https://borealbirds.shinyapps.io/bam_landbird_explorer/]).
 
 Other options for model access include:
 - **1. [BAMexploreR R package](https://github.com/borealbirds/BAMexploreR)** - download and analyze rasters directly in the R environment.
