@@ -7,9 +7,33 @@ server <- function(input, output, session) {
     session$reload()
   })
   ################################################################################################
+  ################################################################################################
+  # Maintenance
+  app_paused <- reactiveFileReader(
+    intervalMillis = 2000,   # check every 2 seconds
+    session = session,
+    filePath = "www/pause_flag.txt",
+    readFunc = function(path) file.exists(path)
+  )
+  
+  observe({
+    if (app_paused()) {
+      
+      showModal(modalDialog(
+        title = "Application temporarily unavailable",
+        "The application is currently on hold for maintenance.",
+        footer = NULL,
+        easyClose = FALSE
+      ))
+      
+      shinyjs::disable(selector = "body")
+    }
+  })
+  ################################################################################################
   
   layers <- callModule(reactiveLayersModule, id = "reactiveLayersModule")
 
+  
   # tab and module-level reactives
   module <- reactive({
     input$tabs
