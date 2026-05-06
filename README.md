@@ -1,3 +1,5 @@
+** The application is currently on hold for maintenance
+
 # BAMexploreR_shiny
 
 `BAMexploreR-shiny` is the Github repository for our [landbird model download and analysis app](https://borealbirds.shinyapps.io/bam_landbird_explorer/).
