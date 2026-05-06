@@ -4,7 +4,8 @@ tagList(
     id = 'tabs',
     collapsible = TRUE,
     header = tagList(
-      tags$head(tags$link(href = "css/style_blanc.css", rel = "stylesheet")
+      tags$head(tags$link(rel = "icon", type = "image/png", href = "bam.png"),
+                tags$link(href = "css/style_blanc.css", rel = "stylesheet")
                 ),
       tags$div(
         style = "position: absolute; right: 20px; top: 10px;",
@@ -102,7 +103,6 @@ tagList(
                  tabsetPanel(id ="centerPanel",
                    tabPanel("Map View", 
                             leafletOutput("myMap", height = 700) %>% withSpinner(),
-                            #popTable("pop_module")
                             conditionalPanel(
                               condition = "input.tabs == 'popstats'",
                               popTable("pop_module")
@@ -122,7 +122,6 @@ tagList(
                )
         ),
         column(3,
-               #uiOutput("rightPanel")
                conditionalPanel(
                  condition="input.tabs == 'data'" , 
                  bandUI("explore_module"),
@@ -137,7 +136,6 @@ tagList(
                conditionalPanel(
                  condition="input.tabs == 'pred'" , 
                  axisUI("pred_module"),
-#                 predDwdUI("pred_module")
                )
                
         )

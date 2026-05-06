@@ -7,11 +7,6 @@ popUI <- function(id, opt) {
         font-size: 14px;
       }
     ", ns("md_text")))),
-    
-    # div(
-    #   id = ns("md_text"),
-    #   includeMarkdown("./Rmd/popstats_tab.md")
-    # ),
     br(), 
     radioButtons(ns("popAnalysis"), "Select the type of analysis:",
                  choices = c("Population size estimation" = "popSize",
@@ -54,7 +49,7 @@ popOccUI <- function(id) {
   ns <- NS(id)
   
   tabPanel(
-    "Species occurrence",  # This will appear as a tab
+    "Species occurrence",  
     tags$style(HTML(sprintf("
       #%s table.dataTable,
       #%s table.dataTable th,
@@ -115,8 +110,8 @@ popSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals) 
     
     if (input$popAnalysis == "popArea") {
       popOccUI("pop_module")  # returns a tabPanel
-    } else {
-      NULL  # tab doesn’t exist
+    } else if(input$popAnalysis == "popSize"){
+      popTable("pop_module")
     }
   })
   # Render kable table into UI
@@ -163,7 +158,7 @@ popSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals) 
   output$popOccPlot <- renderPlot({
     req(input$sppCache, occRasters())
     req(input$popAnalysis=="popArea")
-    
+  
     rpop <- occRasters()$occurrence_rasters[[input$sppCache]]
     rpop_pj <- terra::project(rpop, "EPSG:4326")  
     terra::plot(rpop_pj, main = input$sppCache, col = c("white", "darkgreen"))
