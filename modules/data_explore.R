@@ -28,7 +28,7 @@ exploreUI <- function(id, opt) {
 bandUI  <- function(id) {
   ns <- NS(id)
   div(style = "margin-top: 40px;", hidden(selectInput(ns("band"), label = "Select band for visualization:", 
-              choices = c("mean", "coefficient of variation"), 
+              choices = c("mean", "standard deviation", "detection distance"), 
               selected = "mean"
   )))
 }
@@ -366,9 +366,11 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     # The legend is drawn by the legend observer in server.R
     removeModal()
     
-    # Add band selection in v5 to UI
+    # Band selection only exists once a v5 run is displayed (v4 rasters have a single band)
     if(input$versionSel == "v5"){
       shinyjs::show("band")
+    } else {
+      shinyjs::hide("band")
     }
     
     # Checkbox ids match the layers of this run, so every box points to a raster in sppSelectCache
@@ -402,7 +404,8 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     # Determine which layer to extract based on input$band
     band_index <- switch(input$band,
                           "mean" = 1,
-                          2)   
+                          "standard deviation" = 2,
+                         3)   
     # Extract the selected layer for each species map
     sppMap_layer <- lapply(reactiveVals$sppSelectCache(), function(x) x[[band_index]])
     

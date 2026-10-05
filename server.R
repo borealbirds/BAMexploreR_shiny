@@ -47,17 +47,6 @@ server <- function(input, output, session) {
     sppOnMap = reactiveVal(NULL)
   )
 
-  observe({
-    if (input$tabs == "data") {
-      shinyjs::show("explore_module-band")
-      shinyjs::show("explore_module-dwdNMoutput")
-      shinyjs::show("explore_module-speciesboxes")
-    } else if (input$tabs == "popstats") {
-      shinyjs::hide("explore_module-band")
-      shinyjs::show("explore_module-speciesboxes")
-      shinyjs::show("explore_module-dwdNMoutput")
-    }
-  })
   # Help Component
  # help_modules <- c("data", "dist")
   #lapply(help_modules, function(module) {
@@ -147,8 +136,13 @@ server <- function(input, output, session) {
     req(selected %in% names(cache))
 
     band_index <- as.numeric(reactiveValsList$band())
-    legend_title <- if (band_index == 1) "Mean Density (males/ha)" else "Variation in density"
-
+    legend_title <- if (band_index == 1) {
+      "Mean Density (males/ha)"
+    } else if (band_index == 2) {
+      "Variation in density"
+    } else {
+      "Detection distance (km)"
+    }
     myMap %>% .raster_legend(cache[[selected]][[band_index]], legend_title)
   })
   
