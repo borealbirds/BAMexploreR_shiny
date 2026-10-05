@@ -1,4 +1,4 @@
-speciesCode,commonName,order,scientificName,COSEWIC,Cavity_Birds,Waterfowl,Marine_Birds,Shorebirds,Wetland_Birds,Birds_of_Prey,Forest_Birds,Grassland_Birds,Aerial_Insectivores,Arctic_Birds,Long_Distance_Migrants
+speciesCode,commonName,order,scientificName,COSEWIC,Cavity,Waterfowl,Marine_Birds,Shorebirds,Wetland_Birds,Birds_of_Prey,Forest_Birds,Grassland_Birds,Aerial_Insectivores,Arctic_Birds,Long_Distance_Migrants
 ALFL,Alder Flycatcher,Passeriformes,Empidonax alnorum,0,0,0,0,0,1,0,0,0,1,0,1
 AMCR,American Crow,Passeriformes,Corvus brachyrhynchos,0,0,0,0,0,0,0,0,0,0,0,1
 AMGO,American Goldfinch,Passeriformes,Spinus tristis,0,0,0,0,0,0,0,0,0,0,0,1
@@ -59,7 +59,7 @@ GCSP,Golden-crowned Sparrow,Passeriformes,Zonotrichia atricapilla,0,0,0,0,0,0,0,
 GWWA,Golden-winged Warbler,Passeriformes,Vermivora chrysoptera,1,0,0,0,0,0,0,0,0,0,0,1
 GRSP,Grasshopper Sparrow,Passeriformes,Ammodramus savannarum,1,0,0,0,0,0,0,0,1,0,0,1
 GRCA,Gray Catbird,Passeriformes,Dumetella carolinensis,0,0,0,0,0,0,0,0,0,0,0,1
-GRAJ,Gray Jay,Passeriformes,Perisoreus canadensis,0,0,0,0,0,0,0,1,0,0,0,0
+GRAJ,Gray Jay,Passeriformes,Perisoreus canadensis,0,0,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA
 GCTH,Gray-cheeked Thrush,Passeriformes,Catharus minimus,1,0,0,0,0,0,0,1,0,0,0,1
 GCFL,Great Crested Flycatcher,Passeriformes,Myiarchus crinitus,0,1,0,0,0,0,0,1,0,1,0,1
 GRYE,Greater Yellowlegs,Charadriiformes,Tringa melanoleuca,0,0,0,0,1,0,0,0,0,0,0,0
