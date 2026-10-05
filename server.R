@@ -10,7 +10,7 @@ server <- function(input, output, session) {
   ################################################################################################
   # Maintenance
   app_paused <- reactiveFileReader(
-    intervalMillis = 2000,   # check every 2 seconds
+    intervalMillis = 30000,   # check every 30 seconds (runs for every open session)
     session = session,
     filePath = "www/pause_flag.txt",
     readFunc = function(path) file.exists(path)
@@ -33,73 +33,29 @@ server <- function(input, output, session) {
   
   layers <- callModule(reactiveLayersModule, id = "reactiveLayersModule")
 
-  
-  # tab and module-level reactives
-  module <- reactive({
-    input$tabs
-  })
 
   reactiveValsList <- list(
-    insertedTabs = reactiveVal(c()),
     subunit_names = reactiveVal(NULL),
-    selected_subunits = reactiveValues(selected = character()),
     mapCache = reactiveVal(0),
     sppListCache = reactiveVal(NULL),
-    sppDisplay = reactiveVal(NULL),
     sppSelectCache = reactiveVal(NULL),
     bcrCache = reactiveVal(NULL),
     bcrPred =  reactiveVal(NULL),
     inserted_ids = reactiveVal(character()),
     data_ready = reactiveVal(FALSE),
-    pop_module_out = reactiveVal(NULL),
     band = reactiveVal(NULL),
     sppOnMap = reactiveVal(NULL)
   )
-  
-  ######################## #
-  ### GUIDANCE TEXT ####
-  ######################## #
-  # UI for component guidance text
-  output$gtext_module <- renderUI({
-    req(input$tabs)
-    file <- file.path('Rmd', glue("gtext_{input$tabs}.Rmd"))
-    if (!file.exists(file)) return()
-    includeMarkdown(file)
-  })
 
-  # Control right Panel
-  output$rightPanel <- renderUI({
-    if (input$tabs == "data") {
-      tabsetPanel(
-        tabPanel("Download",
-                 bandUI("explore_module"),
-                 sppUI("explore_module"),
-                 dwdUI("explore_module")
-        )
-      )
-    } else if(input$tabs == "popstats"){
-      tabsetPanel(
-        tabPanel("Download",
-                 br(),
-                 br(),
-                 sppUI("explore_module"),
-                 dwdUI("explore_module")
-        )
-      )
-    }
-  })
-  
   observe({
     if (input$tabs == "data") {
       shinyjs::show("explore_module-band")
-      shinyjs::show("explore_module-bandDef")
       shinyjs::show("explore_module-dwdNMoutput")
       shinyjs::show("explore_module-speciesboxes")
     } else if (input$tabs == "popstats") {
       shinyjs::hide("explore_module-band")
       shinyjs::show("explore_module-speciesboxes")
       shinyjs::show("explore_module-dwdNMoutput")
-      shinyjs::show("explore_module-bandDef")
     }
   })
   # Help Component
@@ -127,7 +83,7 @@ server <- function(input, output, session) {
         });
       }
     ") %>%
-      addProviderTiles("CartoDB.Positron", group="baseMap") %>%
+      addProviderTiles("Esri.WorldGrayCanvas", group="baseMap") %>%
       leafem::addMouseCoordinates() %>%
       # Fit bounds to Canada's extent
       fitBounds(lng1 = -141.0, lat1 = 42, lng2 = -52.0, lat2 = 70) %>%
@@ -138,115 +94,68 @@ server <- function(input, output, session) {
   # Create map proxy for updates
   myMap <- leafletProxy("myMap", session)
 
+  # Proxy calls sent before the map is rendered are dropped by leaflet.js,
+  # so flag when the map exists (it reports its bounds once drawn)
+  mapReady <- reactiveVal(FALSE)
+  observeEvent(input$myMap_bounds, mapReady(TRUE), once = TRUE)
+
+  # The "Species occurrence" tab only exists for the Area of occurrence analysis
+  observe({
+    req(input$tabs)
+    if (input$tabs == "popstats" && identical(input$`pop_module-popAnalysis`, "popArea")) {
+      showTab("centerPanel", "occView", select = TRUE)
+    } else {
+      hideTab("centerPanel", "occView")
+      updateTabsetPanel(session, "centerPanel", selected = "mapView")
+    }
+  })
+
   ########################## #
   ########################## #
   ### ACCESS THE DATA   ###
   ########################## #
   ########################## #
+  # Modules are started the first time their tab is opened, then only once per session:
+  # calling callModule() again would register a duplicate set of observers
+  modules_started <- character()
+
   # Provide species UI
   observeEvent(input$tabs, {
-    req(input$tabs == "data")
-    
+    req(input$tabs == "data", !"data" %in% modules_started)
+    modules_started <<- c(modules_started, "data")
+
     callModule(
       exploreSERVER, "explore_module",
       spp_list = spp_tbl,
       layers = layers,
       myMap = myMap,
-      reactiveVals = reactiveValsList  # Pass the entire list
+      reactiveVals = reactiveValsList,  # Pass the entire list
+      mapReady = mapReady
     )
     
   })
   
-  #build legend on selected species
-  #observeEvent(input$active_raster, {
+  # Single place drawing the species legend: follows the layer shown on the map
+  # (active_raster, set when the user switches layer) and the selected band.
+  # A new run or a band change re-triggers it through sppSelectCache / band.
   observe({
-    req(input$active_raster, reactiveValsList$band())
+    cache <- reactiveValsList$sppSelectCache()
+    req(cache, reactiveValsList$band())
+
     selected <- input$active_raster
-    req(selected)
-    #browser()
-    r_bird <- reactiveValsList$sppSelectCache()[[selected]]
+    if (is.null(selected) || !selected %in% names(cache)) selected <- reactiveValsList$sppOnMap()
+    req(selected %in% names(cache))
+
     band_index <- as.numeric(reactiveValsList$band())
-    r <- r_bird[[band_index]]
-    req(r)
-    
-    # Dynamically set legend title
-    legend_title <- switch(reactiveValsList$band(),
-      "1" = "Mean Density (males/ha)",
-      "Variation in density")
-    
-    #pal <- colorNumeric("YlGnBu", values(r), na.color = "transparent")
-    #rng <- range(values(r), na.rm = TRUE)
-    #breaks <- seq(rng[1], rng[2], length.out = 6)
-    
-    
-    
-    # Option 1
-    #vals <- values(r)
-    #vals <- vals[!is.na(vals)]
-    #
-    # Define your custom palette
-    #my_colors <- c(
-    #  '#f9ffaf', '#edef5c', '#bbdf5f', '#61c074', 
-    #  '#34af7c', '#008c80', '#007a7c', '#255668'
-    #)
-    
-    ## Compute range and breaks
-    #rng <- range(vals, na.rm = TRUE)
-    #breaks <- seq(rng[1], rng[2], length.out = length(my_colors) + 1)
-    
-    #leafletProxy("myMap") %>%
-    #  clearControls() %>%
-    #  addLegend(
-    #    colors = my_colors,
-    #    labels = sprintf("%.4f", breaks[-1]),
-    #    title = legend_title,
-     #   position = "bottomright",
-    #    opacity = 1
-    #  )
-    
-    # Option2
-    r[r ==0] <- NA
-    vals <- values(r)
-    rng_trim <- quantile(vals, probs = c(0.0025, 0.9975), na.rm = TRUE)
-    
-    my_colors <- c(
-      '#f9ffaf', '#edef5c', '#bbdf5f', '#61c074', 
-      '#34af7c', '#008c80', '#007a7c', '#255668'
-    )
-    pal <- colorBin(
-      palette = my_colors,
-      domain = vals,
-      bins = seq(rng_trim[1], rng_trim[2], length.out = length(my_colors) + 1),
-      na.color = "transparent"
-    )
-    
-    leafletProxy("myMap") %>%
-        clearControls() %>%
-        addLegend(
-          pal = pal,
-          values = vals,
-          title = legend_title,
-         position = "bottomright",
-          opacity = 1,
-         labFormat = labelFormat(
-           digits = 4
-         )
-        )
+    legend_title <- if (band_index == 1) "Mean Density (males/ha)" else "Variation in density"
+
+    myMap %>% .raster_legend(cache[[selected]][[band_index]], legend_title)
   })
   
   
   ################################################################################################
   # Observe on tabs
   ################################################################################################
-  observe({
-    req(input$`pop_module-popAnalysis`)
-    if (input$`pop_module-popAnalysis` == "popArea") {
-      # switch away if user tries to view Population table
-      updateTabsetPanel(session, "centerPanel", selected = "Species occurrence")
-    }else{
-      updateTabsetPanel(session, "centerPanel", selected = "Map View")
-    }
-  })
   
   ########################### #
   ########################### #
@@ -267,7 +176,10 @@ server <- function(input, output, session) {
       ))
       return(NULL)  # stop here
     }
-    
+
+    req(!"popstats" %in% modules_started)
+    modules_started <<- c(modules_started, "popstats")
+
     callModule(
       popSERVER, "pop_module",
       layers = layers,
@@ -283,10 +195,12 @@ server <- function(input, output, session) {
   ############################ #
   ############################ #
   observeEvent(input$tabs, {
-    req(input$tabs == "pred")
-    
+    req(input$tabs == "pred", !"pred" %in% modules_started)
+    modules_started <<- c(modules_started, "pred")
+
     callModule(
       predSERVER, "pred_module",
+      spp_list = spp_tbl,
       layers = layers,
       reactiveVals = reactiveValsList  # Pass the entire list
     )

@@ -63,6 +63,20 @@ tagList(
     color: #FFFFFF !important;   /* Hover / active */
     text-decoration: underline;
   }
+")),
+      tags$style(HTML("
+  .disabled-bcr {
+    color: #666 !important;
+    opacity: 0.5;
+  }
+
+  .disabled-bcr input[type='checkbox'] {
+    opacity: 0.5;
+  }
+
+  .disabled-bcr label {
+    color: #666 !important;
+  }
 "))
     ),
     
@@ -100,20 +114,18 @@ tagList(
         column(6,
                conditionalPanel(
                  condition="input.tabs == 'data' || input.tabs == 'popstats'" ,
-                 tabsetPanel(id ="centerPanel",
-                   tabPanel("Map View", 
+                 tabsetPanel(id = "centerPanel",
+                   tabPanel("Map View", value = "mapView",
                             leafletOutput("myMap", height = 700) %>% withSpinner(),
                             conditionalPanel(
-                              condition = "input.tabs == 'popstats'",
+                              condition = "input.tabs == 'popstats' && input['pop_module-popAnalysis'] == 'popSize'",
                               popTable("pop_module")
                             )
                    ),
-                   tabPanel("Species Occurrence",
-                            conditionalPanel(
-                              condition = "input.tabs == 'popstats' && input['pop_module-popAnalysis'] == 'popArea'",
-                              popOccUI("pop_module")
-                            )
-                   ) 
+                   # Shown only for "Area of occurrence" (see server.R)
+                   tabPanel("Species occurrence", value = "occView",
+                            popOccUI("pop_module")
+                   )
                  )
                ),
                conditionalPanel(

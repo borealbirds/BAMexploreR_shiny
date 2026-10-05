@@ -40,23 +40,6 @@ dwdUI <- function(id) {
     tags$style(type="text/css", "#downloadData {background-color:white;color: black}"),
     div(style = "margin-top: 40px;",
         hidden(downloadButton(ns("dwdNMoutput"), "Download selected model(s)")),
-        # # Wrap your text in an id so we can show it later
-        # hidden(
-        #   div(
-        #     id = ns("bandDef"),
-        #     style = "font-size: 0.85em; color: white !important; font-weight: normal;",
-        #     tags$br(),
-        #     tags$br(),
-        #     tags$em("* Band definition"),
-        #     tags$p(
-        #       tags$strong("mean"),
-        #       ": mean density prediction across 32 independent model runs measured in male birds per hectare",
-        #       tags$br(),
-        #       tags$strong("coefficient of variation"),
-        #       ": the variation in density across 32 independnet model runs"
-        #     )
-        #   )
-        # )
     )
   )
 }
@@ -67,50 +50,67 @@ sppUI  <- function(id) {
 }
 
 # GPKG server module
-#exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, subunit_names, selected_subunits, mapCache, sppListCache, bcrCache) {
-exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, reactiveVals) {
+exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, reactiveVals, mapReady) {
   
   ns <- session$ns
-  pop = ~paste("BCR:", subunit_ui)
 
   # Access reactive values from the list
   subunit_names <- reactiveVals$subunit_names
-  selected_subunits <- reactiveVals$selected_subunits
   mapCache <- reactiveVals$mapCache
   sppListCache <- reactiveVals$sppListCache
   sppSelectCache <- reactiveVals$sppSelectCache
   bcrCache <- reactiveVals$bcrCache
-  inserted_ids <- reactiveVals$inserted_ids 
   
   observeEvent(input$versionSel,{
     bcr_map <- if (input$versionSel == "v5") bcrv5.map else bcrv4.map
-    layers$version_reactive(input$versionSel)
     layers$bcr_reactive(bcr_map)
 
     # Extract unique values from the bcr_subunit column
-    sub_names <- unique(bcr_map$subunit_ui)
-    subnames <- c("mosaic", sub_names)
-    
+    subnames <- unique(bcr_map$bcr)
+
     reactiveVals$subunit_names(subnames)
     
     output$bcrCheckboxes <- renderUI({
-      req(subunit_names())  # Ensure it's not NULL
+      req(subunit_names(), input$sppSelect, input$versionSel)
+      
+      if(input$sppDisplay != "speciesCode"){
+        sppSelect <- spp_list %>%
+          filter(!!sym(input$sppDisplay) %in% input$sppSelect) %>%
+          pull(speciesCode)
+      }else{
+        sppSelect <- input$sppSelect
+      }
+      # BCRs available for this species
+      # In v4 all BCRs are available for all species; birdlist only holds v5 BCRs
+      valid_bcr <- if (input$versionSel == "v4") subunit_names() else
+        birdlist$bcr[apply(birdlist[, sppSelect, drop = FALSE], 1, all)]
       
       checkbox_list <- lapply(subunit_names(), function(name) {
-        div(checkboxInput(inputId = ns(name), label = name, value = name %in% bcrCache()))
+        
+        cb <- checkboxInput(
+          inputId = ns(name),
+          label = name,
+          value = name %in% bcrCache()
+        )
+        
+        # Disable if species/BCR combination is FALSE
+        if (!name %in% valid_bcr) {
+          cb <- shinyjs::disabled(cb)
+          cb <- shiny::tagAppendAttributes(cb, class = "disabled-bcr")
+        } else {
+          cb
+        }
       })
       
-      div(class = "checkbox-grid", do.call(tagList, checkbox_list))  # Wrap in a styled div
+      div(
+        class = "checkbox-grid",
+        do.call(tagList, checkbox_list)
+      )
     })
-    
-    
     if(input$versionSel == "v5"){
       output$yrSelect <- renderUI({
         selectizeInput(ns("modYr"), label = div(style = "font-size:13px;margin-top: -10px;", "Select the year"),
                        choices = model.year,  multiple = TRUE,selected = "2020")
-                       #options = list(placeholder = "2020",
-                        #              maxItems = 12,
-                        #              maxOptions = 999, closeOnSelect = FALSE)),
       })
     }else{
       output$yrSelect <- renderUI({
@@ -119,21 +119,26 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     }
   }, ignoreInit = FALSE)
 
-  observeEvent(layers$bcr_reactive(),{
-    req(layers$bcr_reactive())
+  observeEvent(list(layers$bcr_reactive(), mapReady()),{
+    req(layers$bcr_reactive(), mapReady())
     req(input$getLayerNM[1]==0)
     bcr_map <- layers$bcr_reactive()
-    
-    ncat <- if(input$versionSel == "v5") 32 else 16 
+    if(input$versionSel == "v5"){
+      ncat <- 33
+      bcr_map <- bcr_map[!bcr_map$bcr %in% c("Alaska", "Lower48", "Canada"), ]
+    } else{
+     ncat <- 16
+    } 
     custom_palette <- RColorBrewer::brewer.pal(12, "Set3")  # Generate 12 colors from the Set3 palette
     custom_palette <- rep(custom_palette, length.out = ncat)  # Repeat the palette to get 25 colors
-    pal <- colorFactor(palette = custom_palette, domain = bcr_map$subunit_ui)
+    pal <- colorFactor(palette = custom_palette, domain = bcr_map$bcr)
+    pop = ~paste("BCR:", bcr)
     
     myMapProxy %>%
       clearGroup("BCR") %>%
       fitBounds(lng1 = -141.0, lat1 = 42, lng2 = -52.0, lat2 = 70) %>%
-      addPolygons(data=bcr_map, color='black', fillColor = pal(bcr_map$subunit_ui), fillOpacity = 0.8, weight=2, layerId = bcr_map$subunit_ui, popup = pop, group="BCR", options = leafletOptions(pane = "ground")) %>%
-      addLegend(pal = pal, values = bcr_map$subunit_ui, opacity = 1, title = "BCR Subunit", position = "bottomright", group = "BCR", layerId = "legend_custom") %>%
+      addPolygons(data=bcr_map, color='black', fillColor = pal(bcr_map$bcr), fillOpacity = 0.8, weight=2, layerId = bcr_map$bcr, popup = pop, group="BCR", options = leafletOptions(pane = "ground")) %>%
+      addLegend(pal = pal, values = bcr_map$bcr, opacity = 1, title = "BCR Subunit", position = "bottomright", group = "BCR", layerId = "legend_custom") %>%
       addLayersControl(position = "topright",
                        overlayGroups = c("BCR"),
                        options = layersControlOptions(collapsed = FALSE))
@@ -146,15 +151,11 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
   })
   
   observeEvent(selected_subunits(),{
-    
     req(input$getLayerNM[1] ==0)
     req(layers$bcr_reactive())  
     
     bcr_map <- layers$bcr_reactive() 
-    
-    selected_units <- subset(bcr_map, bcr_map$subunit_ui %in% selected_subunits())
-    
-    if("mosaic" %in% selected_subunits()){ selected_units <- bcr_map }
+    selected_units <- subset(bcr_map, bcr_map$bcr %in% selected_subunits())
     
     myMapProxy %>% clearGroup("highlighted")
     
@@ -229,15 +230,43 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
           easyClose = TRUE,
           footer = modalButton("OK")))
       }
-      
+
     req(layers$bcr_reactive(), selected_subunits(), input$sppSelect)  # Ensure both are available
   
+    # test on BCR: in v5, a multi-BCR selection must fall within one mosaic
+    region <- NULL
+    if (input$versionSel == "v5") {
+      sel <- selected_subunits()
+      bcr_groups <- list(Canada = c("Canada", can.bcr),
+                         Alaska = c("Alaska", alaska.bcr),
+                         Lower48 = c("Lower48", lower48.bcr))
+
+      mosaic <- names(bcr_groups)[vapply(bcr_groups, function(g) all(sel %in% g), logical(1))]
+
+      if (length(mosaic) == 0) {
+        showModal(modalDialog(
+          title = "Invalid BCR selection",
+          "The selected BCRs must all belong to the same region (Canada, Alaska or Lower 48).",
+          easyClose = TRUE,
+          footer = modalButton("OK")))
+        return()
+      }
+
+      region <- if (length(sel) == 1) sel else mosaic[1]
+      bcr.crop <- if (length(sel) == 1) {
+                   sel
+                  } else if (length(sel) >1 && all(!sel %in% c("Canada", "Alaska", "Lower48"))) {
+                    bcr.3978 <- if (input$versionSel == "v5") BCRNMv5 else BCRNMv4
+                    bcr.3978[values(bcr.3978)$bcr %in% sel]
+                  } else {
+                    mosaic[1]
+                  }
+    }
+
     bcr_map <- layers$bcr_reactive() %>% st_as_sf()
-    pop = ~paste("BCR:", subunit_ui)
     
     req(mapCache() != input$getLayerNM[1])
 
-    #mapCache(input$getLayerNM[1])
     reactiveVals$mapCache(input$getLayerNM[1])
     # show pop-up ...
     showModal(modalDialog(
@@ -255,10 +284,10 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     yearSelect <- if(input$versionSel == "v5") input$modYr else NULL
     
     # Test on what is available
-    if(any(selected_subunits() == "mosaic")){
+    if(any(selected_subunits() == "mosaic") || input$versionSel == "v4"){
       spp_listfinal <- spp_listsub
     }else{
-      spp_listfinal <- filter_species_by_bcr(birdlist, spp_listsub, selected_subunits())
+      spp_listfinal <- .filter_species_by_bcr(birdlist, spp_listsub, selected_subunits())
     }
     
     dropped <- setdiff(spp_listsub, spp_listfinal)
@@ -270,16 +299,16 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
       easyClose = TRUE,
       footer = NULL))
     }
-    #browser()
+  
     spp_filtered <- spp_list %>%
       filter(speciesCode %in% spp_listfinal) %>%
-      pull(!!sym(input$sppDisplay))
-
-   
+      pull(!!sym(input$sppDisplay)) %>%
+      gsub(" ", "_", .)
+    
     sppMap <- list()
     for (i in seq_along(spp_listfinal)){
       spp <- spp_listfinal[i]
-      spp_name <- spp_filtered[i] 
+      spp_name <- spp_filtered[i]
       
       url <- version.url$url[version.url$version ==input$versionSel]
       if (input$versionSel == "v4") {
@@ -287,9 +316,11 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
         rast_names <- paste(spp_name, input$versionSel, sep = "_")
         sppMap[[rast_names]] <- r 
       } else if (input$versionSel == "v5") {
-        region <- ifelse(length(selected_subunits()) == 1, selected_subunits(), "mosaic")
         if(length(yearSelect) == 1){
           r <- rast(paste0(url,"/",spp,"/", region, "/", spp,"_", region, "_", yearSelect, ".tif"))
+          if(inherits(bcr.crop, "SpatVector")){
+            r <- mask(crop(r, bcr.crop), bcr.crop)
+          }
           rast_names <- paste(spp_name, input$versionSel, yearSelect, sep = "_")
           sppMap[[rast_names]] <- r
         }else{
@@ -325,74 +356,14 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     
     myMapProxy %>%
       clearControls() %>%
-      clearGroup("BCR") %>%
+      #clearGroup("BCR") %>%
       clearGroup("highlighted") %>%
       removeControl("legend_custom") %>%
       fitBounds(map_bounds[1], map_bounds[2], map_bounds[3], map_bounds[4]) %>%
-      add_species_layers(., sppMap_layer, input$sppDisplay, input$versionSel, input$modYr, input$band, band_index)  %>%
-      addPolygons(data=bcr_map, color='black', fillColor = "white", fillOpacity = 0.05, weight=2, layerId = bcr_map$subunit_ui, popup = ~subunit_ui, group="BCR", options = leafletOptions(pane = "overlay"))
+      .add_species_layers(., sppMap_layer)  %>%
+      addPolygons(data=bcr_map, color='black', fillColor = "white", fillOpacity = 0.05, weight=2, layerId = bcr_map$bcr, popup = ~bcr, group="BCR", options = leafletOptions(pane = "overlay"))
 
-    r_bird <- reactiveVals$sppSelectCache()[[1]]
-    r <- r_bird[[1]]
-    req(r)
-    
-    
-    # Option 1
-    #vals <- values(r)
-    #vals <- vals[!is.na(vals)]
-    #
-    # Define your custom palette
-    #my_colors <- c(
-    #  '#f9ffaf', '#edef5c', '#bbdf5f', '#61c074', 
-    #  '#34af7c', '#008c80', '#007a7c', '#255668'
-    #)
-    
-    ## Compute range and breaks
-    #rng <- range(vals, na.rm = TRUE)
-    #breaks <- seq(rng[1], rng[2], length.out = length(my_colors) + 1)
-    
-    #pal <- colorBin(
-    #  palette = my_colors,
-    #  domain = vals,
-    #  bins = breaks,
-    #  na.color = "transparent"
-    #)
-    #myMapProxy %>%
-    #  clearControls() %>%
-    #  addLegend(
-    #    colors = my_colors,
-    #    labels = sprintf("%.4f", breaks[-1]),
-    #    title = "Mean Density (males/ha)",
-    #    position = "bottomright",
-    #    opacity = 1
-    #  )
-    
-    #Option 2
-    r[r ==0] <- NA
-    vals <- values(r)
-    rng_trim <- quantile(vals, probs = c(0.0025, 0.9975), na.rm = TRUE)
-    my_colors <- c(
-      '#f9ffaf', '#edef5c', '#bbdf5f', '#61c074',
-      '#34af7c', '#008c80', '#007a7c', '#255668'
-    )
-    pal <- colorBin(
-      palette = my_colors,
-      domain = vals,
-      bins = seq(rng_trim[1], rng_trim[2], length.out = length(my_colors) + 1),
-      na.color = "transparent"
-    )
-    myMapProxy %>%
-      clearControls() %>%
-      addLegend(
-        pal = pal,
-        values = vals,
-        title = "Mean Density (males/ha)",
-        position = "bottomright",
-        opacity = 1,
-        labFormat = labelFormat(
-          digits = 4
-        )
-      )
+    # The legend is drawn by the legend observer in server.R
     removeModal()
     
     # Add band selection in v5 to UI
@@ -400,17 +371,8 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
       shinyjs::show("band")
     }
     
-    if (input$versionSel == "v5") {
-      new_ids <- unlist(lapply(spp_filtered, function(spp) {
-        paste(spp, input$versionSel, input$modYr, sep = "_")
-      }))
-    } else {
-      new_ids <- paste(spp_filtered, input$versionSel, sep = "_")
-    }
-    
-    # Add new_ids
-    updated_ids <- unique(c(inserted_ids(), new_ids))
-    reactiveVals$inserted_ids(updated_ids)
+    # Checkbox ids match the layers of this run, so every box points to a raster in sppSelectCache
+    reactiveVals$inserted_ids(names(sppMap))
     
     output$speciesboxes <- renderUI({
       req(reactiveVals$inserted_ids())
@@ -427,10 +389,8 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
     # Add download button to UI
     shinyjs::show("dwdNMoutput")
     shinyjs::disable("dwdNMoutput")
-    shinyjs::show("bandDef") 
-    
+
     reactiveVals$data_ready(TRUE)
-    reactiveVals$sppDisplay(input$sppDisplay)
     
   }, ignoreNULL = TRUE)
   
@@ -451,29 +411,10 @@ exploreSERVER <- function(input, output, session, spp_list, layers, myMapProxy, 
       clearImages() %>%
       clearControls() %>%
       clearGroup("Species Data") %>%  # Clear the previous band layer
-      add_species_layers(., sppMap_layer, input$sppDisplay, input$versionSel, input$modYr, input$band, band_index)  # Add the new selected band layer
-    reactiveVals$band(as.character(band_index))
-    
-    r <- sppMap_layer[[reactiveVals$sppOnMap()]]
+      .add_species_layers(., sppMap_layer)  # Add the new selected band layer
 
-    # Dynamically set legend title
-    legend_title <- switch(input$band,
-                           "mean" = "Mean Density (males/ha)",
-                           "Variation in density")
-    
-    pal <- colorNumeric("YlGnBu", values(r), na.color = "transparent")
-    rng <- range(values(r), na.rm = TRUE)
-    breaks <- seq(rng[1], rng[2], length.out = 6)
-    
-    myMapProxy %>%
-      clearControls() %>%
-      addLegend(
-        colors = pal(breaks),
-        labels = sprintf("%.4f", breaks),
-        title = legend_title,
-        position = "bottomright",
-        opacity = 1
-      )
+    # Changing band triggers the legend observer in server.R
+    reactiveVals$band(as.character(band_index))
   })
   
   observe({

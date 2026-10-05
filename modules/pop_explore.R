@@ -39,17 +39,15 @@ popTable <- function(id) {
         color: white !important;
       }
     ", ns("popSizeTbl"), ns("popSizeTbl"),ns("popSizeTbl")))),
-    #tabsetPanel(
-      tabPanel("Population size estimation", DT::dataTableOutput(ns("popSizeTbl")))
-    #)
+    h4("Population size estimation", style = "color: white !important; margin-top: 20px;"),
+    DT::dataTableOutput(ns("popSizeTbl"))
   )
 }
 
 popOccUI <- function(id) {
   ns <- NS(id)
   
-  tabPanel(
-    "Species occurrence",  
+  tagList(
     tags$style(HTML(sprintf("
       #%s table.dataTable,
       #%s table.dataTable th,
@@ -57,8 +55,8 @@ popOccUI <- function(id) {
         color: white !important;
       }
     ", ns("popOccTbl"), ns("popOccTbl"), ns("popOccTbl")))),
-    br(),
-    plotOutput(ns("popOccPlot"), height = "700px"),
+    h4("Area of occurrence", style = "color: white !important; margin-top: 20px;"),
+    plotOutput(ns("popOccPlot"), height = "500px"),
     br(),
     DT::dataTableOutput(ns("popOccTbl"))
   )
@@ -84,14 +82,10 @@ popSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals) 
   
   ns <- session$ns
   
-  sppMap <- reactiveVals$sppSelectCache 
-  spplist <- sppMap()
-  sppName_origin <- names(sppMap())
+  # The module starts once per session, so read the data module's results reactively
+  # (sppSelectCache is already named like inserted_ids: <species>_<version>[_<year>])
+  sppMap <- reactiveVals$sppSelectCache
   sppMapname <- reactiveVals$inserted_ids
-  sppNames <- sppMapname()
-  
-  names(spplist) <- sppNames
-  sppMap(spplist)
   #####################################
   ## observe on sppMap
   observeEvent(sppMapname(), {
@@ -99,26 +93,14 @@ popSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals) 
   }, ignoreNULL = TRUE)
   
   
-  observe({
-    reactiveVals$pop_module_out(input$popAnalysis)
-  })
-  
-  ############
-  #Renser UI
-  output$popPanel <- renderUI({
-    req(input$popAnalysis)
-    
-    if (input$popAnalysis == "popArea") {
-      popOccUI("pop_module")  # returns a tabPanel
-    } else if(input$popAnalysis == "popSize"){
-      popTable("pop_module")
-    }
-  })
   # Render kable table into UI
-  pop_aoi_result <- bam_pop_size(spplist)
-  
+  pop_aoi_result <- reactive({
+    req(sppMap())
+    bam_pop_size(sppMap())
+  })
+
   output$popSizeTbl <- DT::renderDataTable({
-    pop_aoi_result
+    pop_aoi_result()
   }, options = list(dom = 't'), rownames = FALSE)
   
   # Render right panel checkboxInput
@@ -160,8 +142,16 @@ popSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals) 
     req(input$popAnalysis=="popArea")
   
     rpop <- occRasters()$occurrence_rasters[[input$sppCache]]
-    rpop_pj <- terra::project(rpop, "EPSG:4326")  
-    terra::plot(rpop_pj, main = input$sppCache, col = c("white", "darkgreen"))
+
+    # BCR delineation of the model version, in the raster CRS, without the mosaic polygons
+    bcr <- if (grepl("_v4", input$sppCache)) BCRNMv4 else BCRNMv5
+    bcr <- bcr[!bcr$bcr %in% c("Canada", "Alaska", "Lower48"), ]
+    bcr <- terra::crop(terra::project(bcr, terra::crs(rpop)), terra::ext(rpop))
+    bcr_sel <- bcr[bcr$bcr %in% reactiveVals$bcrCache(), ]
+
+    terra::plot(rpop, main = input$sppCache, col = c("white", "darkgreen"))
+    terra::lines(bcr, col = "grey50", lwd = 1)
+    if (nrow(bcr_sel) > 0) terra::lines(bcr_sel, col = "black", lwd = 2)
   })
   
   output$popOccTbl <- DT::renderDataTable({
@@ -170,20 +160,6 @@ popSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals) 
     r <- occRasters()$occurrence_summary %>%
       filter(species == input$sppCache)
   }, options = list(dom = 't'), rownames = FALSE)
-  
-  output$predPlot <- renderPlot({
-    req(input$sppDisplay)
-    
-    selected_name <- strsplit(input$sppCache, "_")[[1]][1]
-    display_col <- sppDisplay() 
-    
-    species_code <- spplist %>%
-      filter(!!sym(display_col) == selected_name) %>%
-      pull(speciesCode)
-    
-    rpop <- occRasters()$occurrence_rasters[[input$sppCache]]
-    terra::plot(rpop, main = input$sppCache, col = c("white", "darkgreen"))
-  })
   
   observe({
     req(reactiveVals$sppSelectCache())
@@ -227,7 +203,7 @@ popSERVER <- function(input, output, session, layers, myMapProxy, reactiveVals) 
       readr::write_csv(occ_out, occ_csv)
       
       popsize_csv <- "BAM_species_popsize.csv"
-      pop_out <- pop_aoi_result %>% filter(species %in% names(selected))
+      pop_out <- pop_aoi_result() %>% filter(species %in% names(selected))
       readr::write_csv(pop_out, popsize_csv)
       
       all_files <- c(tiff_files, popsize_csv, occ_csv)
