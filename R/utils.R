@@ -1,3 +1,24 @@
+#' Emit a warning at most once per session
+#'
+#' @param id A \code{character} key identifying the warning.
+#' @param ... Passed to \code{warning()}.
+#' @noRd
+.warn_once <- function(id, ...) {
+  if (isTRUE(.bam_warn_state[[id]])) {
+    return(invisible(FALSE))
+  }
+  .bam_warn_state[[id]] <- TRUE
+  warning(..., call. = FALSE)
+  invisible(TRUE)
+}
+
+# Session-scoped record of which advisory warnings have already been shown, so
+# that repeated calls in a script or vignette do not bury the console in
+# identical messages.
+.bam_warn_state <- new.env(parent = emptyenv())
+
+
+
 # Downsample, reproject to WGS84 and crop a model raster for leaflet display; zeros become NA
 .display_raster <- function(r) {
   while (ncell(r) * 4 >= 4e6) {
