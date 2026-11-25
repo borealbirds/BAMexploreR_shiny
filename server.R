@@ -1,6 +1,7 @@
 # Define server logic
 server <- function(input, output, session) {
 
+  session$allowReconnect(TRUE)
   ################################################################################################
   # RELOAD
   observeEvent(input$reload_btn, {
